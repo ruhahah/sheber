@@ -1,13 +1,6 @@
-import type { Text } from "./missions";
+import type { Lesson } from "./types";
 
-export type Lesson = {
-  slug: string;
-  title: Text;
-  summary: Text;
-  body: Text[];
-  rule: Text;
-};
-
+// The full lesson texts. Like the missions, they are read on the server only.
 const catalog: Lesson[] = [
   {
     slug: "electricity",
@@ -592,6 +585,340 @@ const catalog: Lesson[] = [
       ru: "Если схема верна, а результат всегда одно и то же неверное число, подозревай арифметику.",
     },
   },
+  {
+    slug: "rgb",
+    title: {
+      en: "RGB LED: mixing colours",
+      kk: "RGB жарықдиоды: түстерді араластыру",
+      ru: "RGB-светодиод: смешиваем цвета",
+    },
+    summary: {
+      en: "Three LEDs in one case, and a fourth leg they share.",
+      kk: "Бір корпустағы үш жарықдиод және олардың ортақ төртінші аяғы.",
+      ru: "Три светодиода в одном корпусе и четвёртая ножка, общая для всех.",
+    },
+    body: [
+      {
+        en: "An RGB LED is three LEDs in one case: red, green and blue. It has four legs: one for each colour and one common leg, the longest. Each colour leg needs its own resistor, because red lights at about 2 V while green and blue need about 3 V; with one shared resistor red would take almost all the current.",
+        kk: "RGB жарықдиоды — бір корпустағы үш жарықдиод: қызыл, жасыл және көк. Оның төрт аяғы бар: әр түске бір-бірден және ең ұзыны — ортақ аяқ. Әр түстің аяғына жеке резистор керек, өйткені қызыл шамамен 2 В-та жанады, ал жасыл мен көкке шамамен 3 В қажет; резистор ортақ болса, токтың барлығын дерлік қызыл алар еді.",
+        ru: "RGB-светодиод — это три светодиода в одном корпусе: красный, зелёный и синий. У него четыре ножки: по одной на каждый цвет и одна общая, самая длинная. На ножку каждого цвета нужен свой резистор, потому что красный загорается примерно при 2 В, а зелёному и синему нужно около 3 В; с одним общим резистором почти весь ток забрал бы красный.",
+      },
+      {
+        en: "The eye mixes the three lights into one colour. Red and green give yellow, red and blue give purple, green and blue give turquoise, and all three give white. With digitalWrite each colour is only on or off, which makes eight combinations. With analogWrite on PWM pins each colour has 256 levels, so any shade is possible: orange is full red with a little green.",
+        kk: "Көз үш жарықты бір түске араластырады. Қызыл мен жасыл сары береді, қызыл мен көк — күлгін, жасыл мен көк — көгілдір, ал үшеуі бірге — ақ. digitalWrite қолданғанда әр түс тек қосулы немесе өшірулі болады, бұл сегіз комбинация береді. ШИМ пиндеріндегі analogWrite әр түске 256 деңгей береді, сондықтан кез келген реңкті алуға болады: қызғылт сары — толық қызыл және аздаған жасыл.",
+        ru: "Глаз смешивает три света в один цвет. Красный с зелёным дают жёлтый, красный с синим — фиолетовый, зелёный с синим — бирюзовый, а все три — белый. С digitalWrite каждый цвет только включён или выключен, и получается восемь сочетаний. С analogWrite на ШИМ-пинах у каждого цвета 256 уровней, поэтому возможен любой оттенок: оранжевый — это полный красный и немного зелёного.",
+      },
+      {
+        en: "There are two types that look identical. In a common-cathode LED the common leg goes to GND and a colour lights when its pin is HIGH. In a common-anode LED the common leg goes to 5V and a colour lights when its pin is LOW, so the numbers are turned around: 0 is full brightness and 255 is off. If every colour comes out as its opposite, you are holding the other type.",
+        kk: "Сырттай бірдей көрінетін екі түрі бар. Ортақ катодты жарықдиодта ортақ аяқ GND-ға қосылады, түс өз пині HIGH болғанда жанады. Ортақ анодты жарықдиодта ортақ аяқ 5V-қа қосылады, түс өз пині LOW болғанда жанады, сондықтан сандар керісінше болады: 0 — толық жарық, 255 — өшірулі. Әр түс өзінің қарама-қарсысы болып шықса, қолыңдағы — екінші түрі.",
+        ru: "Есть два типа, которые выглядят одинаково. У светодиода с общим катодом общая ножка идёт к GND, и цвет горит, когда на его пине HIGH. У светодиода с общим анодом общая ножка идёт к 5V, и цвет горит, когда на его пине LOW, поэтому числа переворачиваются: 0 — полная яркость, 255 — выключено. Если каждый цвет получается противоположным, у тебя в руках второй тип.",
+      },
+    ],
+    rule: {
+      en: "When the colour is wrong, switch on red, green and blue one at a time. That shows at once whether one leg is at fault or the mixing.",
+      kk: "Түс бұрыс шықса, қызыл, жасыл және көкті бір-бірден қосып көр. Сонда ақау бір аяқта ма, әлде араластыруда ма — бірден көрінеді.",
+      ru: "Если цвет не тот, включи красный, зелёный и синий по одному. Сразу станет видно, виновата одна ножка или смешивание.",
+    },
+  },
+  {
+    slug: "sound",
+    title: {
+      en: "Sound: the buzzer and tone()",
+      kk: "Дыбыс: пьезодинамик және tone()",
+      ru: "Звук: пьезодинамик и tone()",
+    },
+    summary: {
+      en: "A sound is a pin switching on and off very fast.",
+      kk: "Дыбыс — өте жылдам қосылып-өшетін пин.",
+      ru: "Звук — это пин, который очень быстро включается и выключается.",
+    },
+    body: [
+      {
+        en: "Sound is vibration. A piezo buzzer holds a thin plate that bends a little each time the voltage on it changes. Switch a pin on and off 440 times a second and the plate hums the note la. The number of switches per second is the frequency, measured in hertz (Hz). A higher frequency means a higher note, not a louder one. People hear from about 20 Hz to about 20 000 Hz.",
+        kk: "Дыбыс — тербеліс. Пьезодинамиктің ішінде кернеуі өзгерген сайын сәл иілетін жұқа пластина бар. Пинді секундына 440 рет қосып-өшірсең, пластина «ля» нотасын шығарады. Секундына ауысу саны — жиілік, ол герцпен (Гц) өлшенеді. Жиілік жоғары болса, нота қаттырақ емес, жіңішкерек (биігірек) естіледі. Адам шамамен 20 Гц-тен 20 000 Гц-ке дейінгі дыбысты естиді.",
+        ru: "Звук — это колебания. Внутри пьезодинамика есть тонкая пластинка, которая слегка изгибается каждый раз, когда на ней меняется напряжение. Включай и выключай пин 440 раз в секунду — и пластинка загудит нотой ля. Число переключений в секунду — это частота, она измеряется в герцах (Гц). Чем выше частота, тем выше нота, а не громче. Человек слышит примерно от 20 Гц до 20 000 Гц.",
+      },
+      {
+        en: "tone(pin, frequency) starts a sound and returns at once: the sketch goes on while a timer inside the chip keeps the pin switching. noTone(pin) stops it. tone(pin, frequency, duration) stops by itself after the given milliseconds, but the sketch still does not wait. So a melody needs a delay after every note, or each note is replaced by the next before anyone hears it.",
+        kk: "tone(pin, жиілік) дыбысты бастап, бірден қайтады: скетч әрі қарай жүре береді, ал микросхеманың ішіндегі таймер пинді ауыстырып тұрады. noTone(pin) оны тоқтатады. tone(pin, жиілік, ұзақтық) берілген миллисекундтан кейін өздігінен тоқтайды, бірақ скетч бәрібір күтпейді. Сондықтан әуенде әр нотадан кейін delay керек, әйтпесе әр нотаны ешкім естіп үлгермей келесісі алмастырады.",
+        ru: "tone(pin, частота) запускает звук и сразу возвращается: скетч идёт дальше, а таймер внутри микросхемы продолжает переключать пин. noTone(pin) останавливает его. tone(pin, частота, длительность) сам остановится через заданные миллисекунды, но скетч всё равно не ждёт. Поэтому в мелодии после каждой ноты нужен delay, иначе каждую ноту заменит следующая раньше, чем её кто-то услышит.",
+      },
+      {
+        en: "Buzzers come in two kinds. A passive one is just the plate and needs tone(); from a steady HIGH it gives a single click. An active one has its own generator and beeps at one fixed pitch as soon as it gets a steady HIGH. The Uno also has limits: it can play only one tone at a time, and while a tone is playing, PWM on pins 3 and 11 does not work properly.",
+        kk: "Пьезодинамиктің екі түрі бар. Пассивті түрі — тек пластина, оған tone() керек; тұрақты HIGH берілсе, ол бір рет сырт етеді де қояды. Активті түрінің өз генераторы бар, ол тұрақты HIGH алған бойда бір ғана тұрақты биіктікте дыбыс шығарады. Uno-ның да шектеулері бар: ол бір уақытта тек бір тон ойнай алады, ал тон ойнап тұрғанда 3 және 11-пиндердегі ШИМ дұрыс жұмыс істемейді.",
+        ru: "Пьезодинамики бывают двух видов. Пассивный — это просто пластинка, ему нужен tone(); от постоянного HIGH он даёт один щелчок. У активного свой генератор, и он пищит на одной постоянной высоте, как только получает постоянный HIGH. У Uno тоже есть ограничения: она может играть только один тон одновременно, а пока тон звучит, ШИМ на пинах 3 и 11 работает неправильно.",
+      },
+    ],
+    rule: {
+      en: "No sound? Ask three things: is the signal changing (tone, not HIGH), can a person hear that frequency, and does anything cut the note short?",
+      kk: "Дыбыс жоқ па? Үш нәрсені сұра: сигнал өзгеріп тұр ма (HIGH емес, tone), бұл жиілікті адам ести ала ма және нотаны бір нәрсе ерте үзіп тастамай ма?",
+      ru: "Нет звука? Спроси три вещи: меняется ли сигнал (tone, а не HIGH), слышит ли человек такую частоту и не обрывает ли что-нибудь ноту раньше времени?",
+    },
+  },
+  {
+    slug: "temperature",
+    title: {
+      en: "Temperature sensors",
+      kk: "Температура датчиктері",
+      ru: "Датчики температуры",
+    },
+    summary: {
+      en: "From a voltage to degrees: one formula and the ways it goes wrong.",
+      kk: "Кернеуден градусқа: бір формула және оның қателесетін жерлері.",
+      ru: "От напряжения к градусам: одна формула и места, где она ломается.",
+    },
+    body: [
+      {
+        en: "An analog temperature sensor such as the TMP36 has three legs: power, output and ground. Its output voltage rises by 10 mV for every degree. So that it can also show frost, the TMP36 adds a fixed 0.5 V: at 0 °C it gives 0.5 V, at 25 °C it gives 0.75 V.",
+        kk: "TMP36 сияқты аналогтық температура датчигінің үш аяғы бар: қорек, шығыс және жер. Оның шығыс кернеуі әр градусқа 10 мВ-қа өседі. Аязды да көрсете алуы үшін TMP36 тұрақты 0,5 В қосады: 0 °C-та ол 0,5 В, 25 °C-та 0,75 В береді.",
+        ru: "У аналогового датчика температуры, например TMP36, три ножки: питание, выход и земля. Его выходное напряжение растёт на 10 мВ на каждый градус. Чтобы показывать и мороз, TMP36 добавляет постоянные 0,5 В: при 0 °C он даёт 0,5 В, при 25 °C — 0,75 В.",
+      },
+      {
+        en: "The board returns a number from 0 to 1023, so the sketch converts in two steps: volts = reading × 5.0 ÷ 1024, then degrees = (volts − 0.5) × 100. The LM35 looks the same but has no offset, and its formula is volts × 100. A formula meant for one sensor and used with the other is wrong by exactly 50 degrees, so read the name printed on the flat side.",
+        kk: "Плата 0-ден 1023-ке дейінгі сан қайтарады, сондықтан скетч оны екі қадаммен аударады: вольт = көрсеткіш × 5.0 ÷ 1024, сосын градус = (вольт − 0.5) × 100. LM35 сырттай дәл сондай, бірақ онда ығысу жоқ, оның формуласы — вольт × 100. Бір датчикке арналған формуланы екіншісіне қолданса, нәтиже тура 50 градусқа қате болады, сондықтан жазық жағындағы атауды оқы.",
+        ru: "Плата возвращает число от 0 до 1023, поэтому скетч пересчитывает его в два шага: вольты = показание × 5.0 ÷ 1024, затем градусы = (вольты − 0.5) × 100. LM35 выглядит так же, но смещения у него нет, и его формула — вольты × 100. Формула от одного датчика, применённая к другому, ошибается ровно на 50 градусов, поэтому читай название на плоской стороне.",
+      },
+      {
+        en: "Direction matters. These sensors look like small transistors, and one plugged in backwards becomes burning hot within seconds: unplug the board at once. Digital sensors such as the DHT11 work differently. They measure by themselves and send finished numbers as pulses, which a library reads through a digital pin. analogRead shows nothing useful on them.",
+        kk: "Бағыт маңызды. Бұл датчиктер кішкентай транзисторларға ұқсайды, ал теріс қойылған датчик бірнеше секундта күйдіретіндей қызады: платаны дереу ажырат. DHT11 сияқты цифрлық датчиктер басқаша жұмыс істейді. Олар өздері өлшеп, дайын сандарды импульстар түрінде жібереді, оларды кітапхана цифрлық пин арқылы оқиды. Оларда analogRead пайдалы ештеңе көрсетпейді.",
+        ru: "Важно направление. Эти датчики похожи на маленькие транзисторы, и вставленный наоборот датчик за несколько секунд раскаляется: сразу отключай плату. Цифровые датчики, например DHT11, устроены иначе. Они измеряют сами и отправляют готовые числа импульсами, которые библиотека читает через цифровой пин. analogRead на них ничего полезного не покажет.",
+      },
+    ],
+    rule: {
+      en: "Check a temperature against common sense first: a room is about 20–25 °C. A steady error of tens of degrees is the formula; a hot sensor is the wiring.",
+      kk: "Температураны алдымен ақылға салып тексер: бөлмеде шамамен 20–25 °C болады. Ондаған градусқа тұрақты қателік — формуладан; ыстық датчик — сызбадан.",
+      ru: "Сначала сверь температуру со здравым смыслом: в комнате около 20–25 °C. Постоянная ошибка в десятки градусов — это формула; горячий датчик — это схема.",
+    },
+  },
+  {
+    slug: "transistor",
+    title: {
+      en: "The transistor: a switch for big loads",
+      kk: "Транзистор: үлкен жүктемеге арналған қосқыш",
+      ru: "Транзистор: выключатель для большой нагрузки",
+    },
+    summary: {
+      en: "A small current from a pin controls a large current from a battery.",
+      kk: "Пиннен келетін аз ток батареядан келетін үлкен токты басқарады.",
+      ru: "Маленький ток с пина управляет большим током от батареи.",
+    },
+    body: [
+      {
+        en: "A pin can give about 20 mA. A motor, a lamp or a strip of LEDs needs many times more. A transistor is an electronic switch with three legs: a small current into the base (B) lets a large current flow from the collector (C) to the emitter (E). The pin only gives the command; the power comes from a battery.",
+        kk: "Пин шамамен 20 мА бере алады. Моторға, шамға немесе жарықдиод таспасына одан әлденеше есе көп керек. Транзистор — үш аяқты электрондық қосқыш: базаға (B) кіретін аз ток коллектордан (C) эмиттерге (E) үлкен токтың өтуіне жол ашады. Пин тек бұйрық береді; қорек батареядан келеді.",
+        ru: "Пин может отдать около 20 мА. Мотору, лампе или светодиодной ленте нужно во много раз больше. Транзистор — это электронный выключатель с тремя ножками: небольшой ток в базу (B) разрешает большому току течь от коллектора (C) к эмиттеру (E). Пин только даёт команду; питание приходит от батареи.",
+      },
+      {
+        en: "The usual wiring for an NPN transistor: pin, then a resistor of about 1 kΩ, then the base; emitter to GND; the load between the battery plus and the collector. The battery minus is joined to the Arduino GND. Without the base resistor the pin is overloaded; with the collector and emitter swapped the transistor barely opens. The order of the legs differs between models, so look it up in the datasheet.",
+        kk: "NPN транзисторды қосудың әдеттегі сызбасы: пин, сосын шамамен 1 кОм резистор, сосын база; эмиттер GND-ға; жүктеме батарея плюсі мен коллектордың арасында. Батареяның минусы Arduino GND-мен қосылады. База резисторы болмаса, пинге артық жүктеме түседі; коллектор мен эмиттер ауысып кетсе, транзистор әрең ашылады. Аяқтардың реті әр модельде әртүрлі, сондықтан оны құжаттамадан (datasheet) қара.",
+        ru: "Обычная схема для NPN-транзистора: пин, затем резистор около 1 кОм, затем база; эмиттер к GND; нагрузка между плюсом батареи и коллектором. Минус батареи соединяется с GND Arduino. Без резистора базы пин перегружается; если перепутать коллектор и эмиттер, транзистор едва открывается. Порядок ножек у разных моделей разный, поэтому смотри его в документации (datasheet).",
+      },
+      {
+        en: "Two more things. Every transistor has a largest current: a BC547 handles 100 mA, a PN2222 600 mA, a TIP120 5 A, so choose one with a margin. And a motor or a relay is a coil: when it is switched off it produces a short spike of high voltage that can destroy the transistor. A diode across the load, with its stripe toward the battery plus, gives the spike a safe path.",
+        kk: "Тағы екі нәрсе. Әр транзистордың ең үлкен тогы бар: BC547 100 мА-ге, PN2222 600 мА-ге, TIP120 5 А-ге шыдайды, сондықтан оны қормен таңда. Ал мотор немесе реле — орам: өшірілген сәтте ол транзисторды істен шығара алатын қысқа жоғары кернеу секірісін туғызады. Жүктемеге параллель, жолағын батарея плюсіне қаратып қойылған диод бұл секіріске қауіпсіз жол береді.",
+        ru: "Ещё две вещи. У каждого транзистора есть наибольший ток: BC547 выдерживает 100 мА, PN2222 — 600 мА, TIP120 — 5 А, так что выбирай с запасом. А мотор или реле — это катушка: при выключении она создаёт короткий всплеск высокого напряжения, который может уничтожить транзистор. Диод параллельно нагрузке, полоской к плюсу батареи, даёт всплеску безопасный путь.",
+      },
+    ],
+    rule: {
+      en: "For anything hungrier than an LED: pin to the base through a resistor, load on the collector, emitter to ground, and a diode across every coil.",
+      kk: "Жарықдиодтан көп ток тартатын кез келген нәрсе үшін: пин базаға резистор арқылы, жүктеме коллекторда, эмиттер жерде, ал әр орамға параллель диод.",
+      ru: "Для всего, что прожорливее светодиода: пин к базе через резистор, нагрузка на коллекторе, эмиттер на земле и диод параллельно каждой катушке.",
+    },
+  },
+  {
+    slug: "motors",
+    title: {
+      en: "Motors and the L298N driver",
+      kk: "Моторлар және L298N драйвері",
+      ru: "Моторы и драйвер L298N",
+    },
+    summary: {
+      en: "Speed, direction and the board between the Arduino and the wheels.",
+      kk: "Жылдамдық, бағыт және Arduino мен дөңгелектердің арасындағы плата.",
+      ru: "Скорость, направление и плата между Arduino и колёсами.",
+    },
+    body: [
+      {
+        en: "A DC motor spins when it gets voltage, and spins the other way when its two wires are swapped. One transistor can only switch it on and off. To reverse it without touching the wires you need four switches in an arrangement called an H-bridge. The L298N board holds two H-bridges, enough for the two motors of a small robot.",
+        kk: "Тұрақты ток моторы кернеу берілгенде айналады, ал екі сымының орнын ауыстырса, кері бағытта айналады. Бір транзистор оны тек қосып-өшіре алады. Сымдарға тимей бағытын өзгерту үшін H-көпір деп аталатын сызбамен қосылған төрт қосқыш керек. L298N платасында екі H-көпір бар — бұл шағын роботтың екі моторына жетеді.",
+        ru: "Мотор постоянного тока вращается, когда получает напряжение, и вращается в другую сторону, если поменять местами два его провода. Один транзистор может его только включать и выключать. Чтобы менять направление, не трогая провода, нужны четыре выключателя, соединённые по схеме под названием H-мост. На плате L298N два H-моста — этого хватает на два мотора небольшого робота.",
+      },
+      {
+        en: "Each motor has three inputs on the driver. IN1 and IN2 set the direction: HIGH and LOW is one way, LOW and HIGH is the other, and two equal levels stop the motor. ENA sets the speed: take the jumper off it, connect it to a PWM pin and use analogWrite from 0 to 255. The motor goes to OUT1 and OUT2, and the battery to the terminals marked 12V and GND.",
+        kk: "Драйверде әр моторға үш кіріс бар. IN1 мен IN2 бағытты анықтайды: HIGH және LOW — бір бағыт, LOW және HIGH — екінші бағыт, ал екі бірдей деңгей моторды тоқтатады. ENA жылдамдықты береді: одан джамперді алып таста, оны ШИМ пиніне қос және 0-ден 255-ке дейінгі analogWrite қолдан. Мотор OUT1 мен OUT2-ге, ал батарея 12V және GND деп белгіленген контактілерге қосылады.",
+        ru: "У каждого мотора на драйвере три входа. IN1 и IN2 задают направление: HIGH и LOW — в одну сторону, LOW и HIGH — в другую, а два одинаковых уровня останавливают мотор. ENA задаёт скорость: сними с него перемычку, подключи к ШИМ-пину и используй analogWrite от 0 до 255. Мотор подключается к OUT1 и OUT2, а батарея — к клеммам с метками 12V и GND.",
+      },
+      {
+        en: "Three things to remember. The driver's GND, the battery minus and the Arduino GND must be joined, or the signals mean nothing. About 2 V is lost inside the L298N, so the motor always gets less than the battery gives. And a motor does not start from very small PWM values: it only hums until the number is high enough to overcome friction.",
+        kk: "Есте сақтайтын үш нәрсе. Драйвердің GND-сы, батареяның минусы және Arduino-ның GND-сы өзара қосылуы керек, әйтпесе сигналдардың мағынасы болмайды. L298N-нің ішінде шамамен 2 В жоғалады, сондықтан мотор әрқашан батарея бергеннен аз алады. Сондай-ақ мотор өте аз ШИМ мәндерінен қозғалмайды: сан үйкелісті жеңуге жеткенше ол тек ызыңдайды.",
+        ru: "Три вещи, которые нужно помнить. GND драйвера, минус батареи и GND Arduino должны быть соединены, иначе сигналы ничего не значат. Внутри L298N теряется около 2 В, поэтому мотор всегда получает меньше, чем даёт батарея. И мотор не трогается с места при очень малых значениях ШИМ: он только гудит, пока число не станет достаточным, чтобы преодолеть трение.",
+      },
+    ],
+    rule: {
+      en: "A motor that will not obey: check the common ground first, then the IN1 and IN2 pair, then the number on ENA.",
+      kk: "Мотор бағынбаса: алдымен ортақ жерді, сосын IN1 мен IN2 жұбын, сосын ENA-дағы санды тексер.",
+      ru: "Мотор не слушается: сначала проверь общую землю, затем пару IN1 и IN2, затем число на ENA.",
+    },
+  },
+  {
+    slug: "line-sensor",
+    title: { en: "Line sensors", kk: "Сызық датчиктері", ru: "Датчики линии" },
+    summary: {
+      en: "How a robot sees a black line with invisible light.",
+      kk: "Робот қара сызықты көрінбейтін жарықпен қалай көреді.",
+      ru: "Как робот видит чёрную линию невидимым светом.",
+    },
+    body: [
+      {
+        en: "A line sensor has two parts side by side: a small lamp that shines infrared light, which the eye cannot see, and a receiver that measures how much of it comes back. A white floor reflects most of the light, black tape swallows it. That difference is all the robot knows about the line.",
+        kk: "Сызық датчигінде қатар тұрған екі бөлік бар: көзге көрінбейтін инфрақызыл жарық шығаратын кішкентай шам және оның қаншасы қайтып келетінін өлшейтін қабылдағыш. Ақ еден жарықтың көбін шағылыстырады, қара таспа оны жұтып қояды. Роботтың сызық туралы білетінінің бәрі — осы айырмашылық.",
+        ru: "В датчике линии рядом стоят две детали: маленькая лампочка, которая светит инфракрасным светом, невидимым для глаза, и приёмник, который измеряет, сколько его вернулось. Белый пол отражает большую часть света, чёрная лента его поглощает. Эта разница — всё, что робот знает о линии.",
+      },
+      {
+        en: "A module usually has two outputs. AO is analog: a number from 0 to 1023 that the sketch compares with a threshold. Measure the number over the floor and over the tape first and put the threshold halfway between. DO is digital: the module compares for you and answers HIGH or LOW; its level is set with a small screw, and a light on the module shows the answer. Which level means “line” differs between modules, so check it.",
+        kk: "Модульде әдетте екі шығыс болады. AO — аналогтық: скетч шек мәнімен салыстыратын 0-ден 1023-ке дейінгі сан. Алдымен санды еденнің үстінде және таспаның үстінде өлше де, шекті екеуінің ортасына қой. DO — цифрлық: модуль сенің орныңа салыстырып, HIGH немесе LOW деп жауап береді; оның деңгейі кішкентай бұрандамен қойылады, ал жауапты модульдегі шам көрсетеді. Қай деңгей «сызық» дегенді білдіретіні модульге байланысты, сондықтан оны тексер.",
+        ru: "У модуля обычно два выхода. AO — аналоговый: число от 0 до 1023, которое скетч сравнивает с порогом. Сначала измерь число над полом и над лентой и поставь порог посередине. DO — цифровой: модуль сравнивает за тебя и отвечает HIGH или LOW; его уровень задаётся маленьким винтом, а ответ показывает лампочка на модуле. Какой уровень означает «линия», зависит от модуля, поэтому проверь это.",
+      },
+      {
+        en: "Three things spoil the picture. Height: the sensor works a few millimetres above the floor; from several centimetres white and black look the same. Sunlight: it contains infrared too and can blind the receiver near a window. And sides: a robot has a left and a right sensor, and if they are swapped in the code it steers away from the line instead of toward it.",
+        kk: "Көріністі үш нәрсе бұзады. Биіктік: датчик еденнен бірнеше миллиметр биіктікте жұмыс істейді; бірнеше сантиметрден ақ пен қара бірдей көрінеді. Күн сәулесі: онда да инфрақызыл жарық бар, ол терезе жанында қабылдағышты «соқыр» етуі мүмкін. Және жақтар: роботта сол және оң датчик бар, ал олар кодта ауысып кетсе, робот сызыққа қарай емес, одан қашып бұрылады.",
+        ru: "Картину портят три вещи. Высота: датчик работает в нескольких миллиметрах над полом; с нескольких сантиметров белое и чёрное выглядят одинаково. Солнечный свет: в нём тоже есть инфракрасный, и у окна он может ослепить приёмник. И стороны: у робота есть левый и правый датчик, и если перепутать их в коде, он будет рулить от линии, а не к ней.",
+      },
+    ],
+    rule: {
+      en: "Before writing any line-following code, print the raw numbers over the floor and over the tape. If they are not far apart, fix the sensor, not the code.",
+      kk: "Сызықпен жүру кодын жазбас бұрын еденнің үстіндегі және таспаның үстіндегі бастапқы сандарды шығарып көр. Олар бір-бірінен алшақ болмаса, кодты емес, датчикті жөнде.",
+      ru: "Прежде чем писать код езды по линии, выведи сырые числа над полом и над лентой. Если они близки друг к другу, чини датчик, а не код.",
+    },
+  },
+  {
+    slug: "arrays-loops",
+    title: { en: "Loops and arrays", kk: "Циклдер мен массивтер", ru: "Циклы и массивы" },
+    summary: {
+      en: "Doing the same thing many times without writing it many times.",
+      kk: "Бір нәрсені көп рет жазбай-ақ көп рет орындау.",
+      ru: "Как сделать одно и то же много раз, не записывая это много раз.",
+    },
+    body: [
+      {
+        en: "A for loop repeats the lines between its braces a set number of times. for (int i = 0; i < 3; i++) has three parts: where the counter starts, the condition for going on, and the step after each pass. Here i takes the values 0, 1 and 2. A while loop has only the condition; the step that will one day make it false you must write inside the body.",
+        kk: "for циклі жақшаларының арасындағы жолдарды белгілі бір рет қайталайды. for (int i = 0; i < 3; i++) үш бөліктен тұрады: есептегіш қайдан басталады, жалғастыру шарты және әр айналымнан кейінгі қадам. Мұнда i 0, 1 және 2 мәндерін қабылдайды. while циклінде тек шарт бар; оны бір күні жалған ететін қадамды дененің ішіне өзің жазуың керек.",
+        ru: "Цикл for повторяет строки между своими скобками заданное число раз. В for (int i = 0; i < 3; i++) три части: с чего начинается счётчик, условие продолжения и шаг после каждого прохода. Здесь i принимает значения 0, 1 и 2. У цикла while есть только условие; шаг, который однажды сделает его ложным, нужно написать внутри тела самому.",
+      },
+      {
+        en: "An array is a row of numbered boxes under one name: int pins[3] = {8, 9, 10}. The numbering starts from 0, so the boxes are pins[0], pins[1] and pins[2]. A loop and an array belong together: the counter is the number of the box. The board does not check that number, and asking for pins[3] gives no error, only a stray value from the memory next door.",
+        kk: "Массив — бір атпен аталатын, нөмірленген ұяшықтар қатары: int pins[3] = {8, 9, 10}. Нөмірлеу 0-ден басталады, сондықтан ұяшықтар — pins[0], pins[1] және pins[2]. Цикл мен массив бірге жүреді: есептегіш — ұяшықтың нөмірі. Плата бұл нөмірді тексермейді, pins[3]-ті сұрасаң қате шықпайды, тек көрші жадтағы кездейсоқ мән келеді.",
+        ru: "Массив — это ряд пронумерованных ячеек под одним именем: int pins[3] = {8, 9, 10}. Нумерация начинается с 0, поэтому ячейки — это pins[0], pins[1] и pins[2]. Цикл и массив работают в паре: счётчик — это номер ячейки. Плата этот номер не проверяет, и запрос pins[3] не даёт ошибки, а только случайное значение из соседней памяти.",
+      },
+      {
+        en: "Two more details decide what a loop really does. Only the lines inside the braces are repeated: a delay written after the closing brace happens once, not on every pass. And every element has the array's type: a byte holds 0 to 255, so larger numbers stored in a byte array are silently cut down.",
+        kk: "Циклдің шын мәнінде не істейтінін тағы екі нәрсе анықтайды. Тек жақшалардың ішіндегі жолдар ғана қайталанады: жабатын жақшадан кейін жазылған delay әр айналымда емес, бір рет орындалады. Және әр элементтің түрі массивтің түрімен бірдей: byte 0-ден 255-ке дейін сақтайды, сондықтан byte массивіне сақталған үлкенірек сандар үнсіз қысқартылады.",
+        ru: "Ещё две детали определяют, что цикл делает на самом деле. Повторяются только строки внутри скобок: delay, написанный после закрывающей скобки, выполняется один раз, а не на каждом проходе. И у каждого элемента тот же тип, что у массива: byte хранит от 0 до 255, поэтому числа побольше, записанные в массив byte, молча обрезаются.",
+      },
+    ],
+    rule: {
+      en: "For any loop, say aloud the values the counter will take: first, last, and how many. Most loop bugs are visible in that list.",
+      kk: "Кез келген цикл үшін есептегіш қабылдайтын мәндерді дауыстап айт: біріншісі, соңғысы және нешеу. Цикл қателерінің көбі осы тізімнен-ақ көрінеді.",
+      ru: "Для любого цикла проговори вслух значения, которые примет счётчик: первое, последнее и сколько их. Большинство ошибок в циклах видно по этому списку.",
+    },
+  },
+  {
+    slug: "functions",
+    title: { en: "Functions", kk: "Функциялар", ru: "Функции" },
+    summary: {
+      en: "Giving a piece of code a name, and the ways that goes wrong.",
+      kk: "Код бөлігіне ат қою және оның қателесетін жолдары.",
+      ru: "Как дать куску кода имя и где при этом ошибаются.",
+    },
+    body: [
+      {
+        en: "A function is a named block of code: void blinkTwice() { ... }. Writing it only teaches the board how to do something. It runs when it is called by name with parentheses: blinkTwice();. Without the parentheses the line is legal but does nothing. The board itself calls only setup() and loop(); every other function runs because one of those two called it.",
+        kk: "Функция — аты бар код блогы: void blinkTwice() { ... }. Оны жазу платаға бір нәрсені қалай істеу керегін ғана үйретеді. Ол атымен, жақшасымен бірге шақырылғанда орындалады: blinkTwice();. Жақшасыз жол рұқсат етілген, бірақ ештеңе істемейді. Плата өзі тек setup() пен loop()-ты шақырады; қалған әр функция сол екеуінің бірі шақырғандықтан орындалады.",
+        ru: "Функция — это блок кода с именем: void blinkTwice() { ... }. Написать её — значит только научить плату что-то делать. Она выполняется, когда её вызывают по имени со скобками: blinkTwice();. Без скобок строка допустима, но ничего не делает. Сама плата вызывает только setup() и loop(); любая другая функция выполняется потому, что её вызвала одна из этих двух.",
+      },
+      {
+        en: "A function can take values in its parentheses and give one back. void blink(int pin, int times) takes two; the values in a call are matched by their order, so blink(8, 3) and blink(3, 8) are different commands. The function works on copies of what it is given. To send a result back it uses return, and the caller must store it: level = brighter(level);.",
+        kk: "Функция жақшасының ішінде мәндерді қабылдап, біреуін қайтара алады. void blink(int pin, int times) екі мән қабылдайды; шақырудағы мәндер ретіне қарай сәйкестендіріледі, сондықтан blink(8, 3) пен blink(3, 8) — әртүрлі бұйрықтар. Функция өзіне берілгеннің көшірмелерімен жұмыс істейді. Нәтижені қайтару үшін ол return қолданады, ал шақырушы оны сақтауы керек: level = brighter(level);.",
+        ru: "Функция может принимать значения в скобках и возвращать одно обратно. void blink(int pin, int times) принимает два; значения в вызове сопоставляются по порядку, поэтому blink(8, 3) и blink(3, 8) — разные команды. Функция работает с копиями того, что ей дали. Чтобы вернуть результат, она использует return, а вызывающий код должен его сохранить: level = brighter(level);.",
+      },
+      {
+        en: "Where a variable is created decides who can see it. One created inside a function's braces exists only there and is gone when the function ends. One created at the top of the sketch, outside all functions, is global: every function can read and change it, and it keeps its value between passes of loop().",
+        kk: "Айнымалының қай жерде жасалғаны оны кім көре алатынын анықтайды. Функцияның жақшалары ішінде жасалған айнымалы тек сонда ғана бар және функция аяқталғанда жойылады. Скетчтің басында, барлық функциялардан тыс жасалған айнымалы — глобалды: оны әр функция оқи да, өзгерте де алады және ол loop() айналымдарының арасында мәнін сақтайды.",
+        ru: "Место, где создана переменная, определяет, кто её видит. Созданная внутри скобок функции существует только там и исчезает, когда функция заканчивается. Созданная в начале скетча, вне всех функций, — глобальная: любая функция может её читать и менять, и она сохраняет значение между проходами loop().",
+      },
+    ],
+    rule: {
+      en: "When a function seems to do nothing, check three things: is it really called, with parentheses; are the arguments in the right order; and does its result go anywhere?",
+      kk: "Функция ештеңе істемейтін сияқты көрінсе, үш нәрсені тексер: ол шынымен, жақшасымен шақырылды ма; аргументтер дұрыс ретпен тұр ма; және оның нәтижесі бір жерге сақтала ма?",
+      ru: "Если функция как будто ничего не делает, проверь три вещи: вызвана ли она на самом деле, со скобками; в правильном ли порядке аргументы; и попадает ли куда-нибудь её результат?",
+    },
+  },
+  {
+    slug: "memory",
+    title: {
+      en: "Memory: what the board remembers",
+      kk: "Жад: плата нені есте сақтайды",
+      ru: "Память: что плата помнит",
+    },
+    summary: {
+      en: "Three kinds of memory, and why a variable forgets.",
+      kk: "Жадтың үш түрі және айнымалының неге ұмытатыны.",
+      ru: "Три вида памяти и почему переменная забывает.",
+    },
+    body: [
+      {
+        en: "The Uno has three kinds of memory. Flash, 32 KB, holds the sketch itself and keeps it without power. RAM, 2 KB, holds the variables while the sketch runs and is wiped at every reset and power-off. EEPROM, 1 KB, is a small store that keeps its contents without power.",
+        kk: "Uno-да жадтың үш түрі бар. Flash (32 КБ) скетчтің өзін сақтайды және оны қорексіз де ұстайды. RAM (2 КБ) скетч жұмыс істеп тұрғанда айнымалыларды сақтайды және әр қайта іске қосылғанда, қорек өшкенде тазаланады. EEPROM (1 КБ) — мазмұнын қорексіз сақтайтын шағын қойма.",
+        ru: "У Uno три вида памяти. Flash, 32 КБ, хранит сам скетч и не теряет его без питания. RAM, 2 КБ, хранит переменные, пока скетч работает, и очищается при каждой перезагрузке и выключении. EEPROM, 1 КБ, — небольшое хранилище, которое сохраняет содержимое без питания.",
+      },
+      {
+        en: "RAM is small: 2048 bytes for everything. An int takes 2 bytes, so an array of a thousand ints already fills it; the IDE reports how much is used when it builds the sketch. Anything that must survive a power cut goes to EEPROM with the EEPROM library. One cell holds one byte, 0 to 255, through EEPROM.read() and EEPROM.write(); EEPROM.put() and EEPROM.get() store bigger types across several cells.",
+        kk: "RAM шағын: барлығына 2048 байт. int 2 байт алады, сондықтан мың int-тен тұратын массивтің өзі оны толтырып тастайды; IDE скетчті құрастырғанда қаншасы қолданылғанын хабарлайды. Қорек өшкеннен кейін сақталуы тиіс нәрсенің бәрі EEPROM кітапханасы арқылы EEPROM-ға жазылады. Бір ұяшық EEPROM.read() және EEPROM.write() арқылы бір байтты (0–255) сақтайды; EEPROM.put() пен EEPROM.get() үлкенірек түрлерді бірнеше ұяшыққа сақтайды.",
+        ru: "RAM маленькая: 2048 байт на всё. int занимает 2 байта, поэтому массив из тысячи int уже заполняет её целиком; IDE при сборке скетча сообщает, сколько занято. Всё, что должно пережить отключение питания, записывают в EEPROM через библиотеку EEPROM. Одна ячейка хранит один байт, от 0 до 255, через EEPROM.read() и EEPROM.write(); EEPROM.put() и EEPROM.get() сохраняют типы побольше в нескольких ячейках.",
+      },
+      {
+        en: "EEPROM has two habits to remember. A cell that has never been written reads as 255, not 0, so a sketch must handle its first start. And cells wear out: each is guaranteed for about 100 000 writes. Never write on every pass of loop(); write when the value has changed, with EEPROM.update(), or when the user asks to save.",
+        kk: "EEPROM-ның есте сақтайтын екі қасиеті бар. Ешқашан жазылмаған ұяшық 0 емес, 255 болып оқылады, сондықтан скетч бірінші іске қосылуын ескеруі керек. Және ұяшықтар тозады: әрқайсысына шамамен 100 000 жазуға кепілдік беріледі. loop()-тың әр айналымында ешқашан жазба; мән өзгергенде EEPROM.update() арқылы немесе пайдаланушы сақтауды сұрағанда жаз.",
+        ru: "У EEPROM есть две особенности, о которых нужно помнить. Ячейка, в которую ещё не писали, читается как 255, а не 0, поэтому скетч должен учитывать первый запуск. И ячейки изнашиваются: каждая гарантированно выдерживает около 100 000 записей. Никогда не пиши на каждом проходе loop(); пиши, когда значение изменилось, через EEPROM.update(), или когда пользователь просит сохранить.",
+      },
+    ],
+    rule: {
+      en: "For every value ask where it lives: in RAM it dies with the power, in EEPROM it survives, but only if you write it rarely and read it back at the start.",
+      kk: "Әр мән туралы оның қайда тұратынын сұра: RAM-да ол қорекпен бірге жоғалады, EEPROM-да сақталады, бірақ оны сирек жазып, басында қайта оқығанда ғана.",
+      ru: "Про каждое значение спроси, где оно живёт: в RAM оно умирает вместе с питанием, в EEPROM выживает, но только если писать его редко и читать обратно при запуске.",
+    },
+  },
+  {
+    slug: "interrupts",
+    title: { en: "Interrupts", kk: "Үзілістер", ru: "Прерывания" },
+    summary: {
+      en: "When a pin cannot wait for the sketch to ask.",
+      kk: "Пин скетчтің сұрағанын күте алмайтын кезде.",
+      ru: "Когда пин не может ждать, пока скетч его спросит.",
+    },
+    body: [
+      {
+        en: "Usually a sketch asks a pin for its state again and again, and a short event can slip by while the sketch is busy with a delay. An interrupt turns this around: the pin calls the board. attachInterrupt(digitalPinToInterrupt(2), onPress, FALLING) means: the moment pin 2 falls from HIGH to LOW, pause everything, run onPress, then carry on. On the Uno only pins 2 and 3 can do this.",
+        kk: "Әдетте скетч пиннің күйін қайта-қайта сұрайды, ал скетч delay-мен айналысып жатқанда қысқа оқиға байқалмай өтіп кетуі мүмкін. Үзіліс мұны керісінше етеді: пин платаны өзі шақырады. attachInterrupt(digitalPinToInterrupt(2), onPress, FALLING) мынаны білдіреді: 2-пин HIGH-тан LOW-ға түскен сәтте бәрін тоқтата тұр, onPress-ті орында, сосын жалғастыр. Uno-да мұны тек 2 және 3-пиндер істей алады.",
+        ru: "Обычно скетч снова и снова спрашивает у пина его состояние, и короткое событие может проскочить, пока скетч занят в delay. Прерывание переворачивает это: пин сам зовёт плату. attachInterrupt(digitalPinToInterrupt(2), onPress, FALLING) означает: в момент, когда пин 2 падает с HIGH на LOW, приостанови всё, выполни onPress и продолжай. У Uno так умеют только пины 2 и 3.",
+      },
+      {
+        en: "The last word chooses the event. FALLING and RISING are moments: the pin going down or up. CHANGE is both. LOW is a state, and the handler is repeated without a break for as long as it lasts. An interrupt also reacts to noise, so the pin must be held by a pull-up, exactly as for an ordinary button.",
+        kk: "Соңғы сөз оқиғаны таңдайды. FALLING мен RISING — сәттер: пиннің төмен түсуі немесе жоғары көтерілуі. CHANGE — екеуі де. LOW — күй, ол сақталып тұрғанша өңдегіш үзіліссіз қайталанады. Үзіліс кедергілерге де жауап береді, сондықтан пинді кәдімгі батырмадағыдай pull-up ұстап тұруы керек.",
+        ru: "Последнее слово выбирает событие. FALLING и RISING — это моменты: пин идёт вниз или вверх. CHANGE — оба. LOW — это состояние, и пока оно длится, обработчик повторяется без перерыва. Прерывание реагирует и на помехи, поэтому пин должен удерживаться подтяжкой, точно так же, как у обычной кнопки.",
+      },
+      {
+        en: "The handler has strict rules. While it runs, every other interrupt waits, including the board's clock: millis() stands still and delay() does not work. So a handler is a few quick lines, typically setting a flag that loop() acts on. And every variable that a handler shares with the rest of the sketch must be declared volatile, or the compiler may never notice that it changed.",
+        kk: "Өңдегіштің қатаң ережелері бар. Ол орындалып жатқанда, қалған үзілістердің бәрі, соның ішінде платаның сағаты да күтеді: millis() өзгермейді, delay() жұмыс істемейді. Сондықтан өңдегіш — бірнеше жылдам жол, әдетте ол loop() әрекет ететін жалаушаны қояды. Ал өңдегіш скетчтің қалған бөлігімен ортақ қолданатын әр айнымалы volatile деп жариялануы керек, әйтпесе компилятор оның өзгергенін ешқашан байқамауы мүмкін.",
+        ru: "У обработчика строгие правила. Пока он выполняется, все остальные прерывания ждут, включая часы платы: millis() стоит на месте, а delay() не работает. Поэтому обработчик — это несколько быстрых строк; обычно он выставляет флаг, по которому действует loop(). И каждая переменная, общая для обработчика и остального скетча, должна быть объявлена как volatile, иначе компилятор может так и не заметить, что она изменилась.",
+      },
+    ],
+    rule: {
+      en: "Keep a handler to three lines: note what happened in a volatile variable and leave. Everything slow belongs in loop().",
+      kk: "Өңдегішті үш жолдан асырма: не болғанын volatile айнымалыға белгіле де, шық. Баяу нәрсенің бәрінің орны — loop().",
+      ru: "Держи обработчик в пределах трёх строк: отметь в volatile-переменной, что произошло, и выходи. Всё медленное должно быть в loop().",
+    },
+  },
 ];
 
 // The order lessons are read in: from zero to tricky.
@@ -606,10 +933,20 @@ const ORDER = [
   "digital-pins",
   "buttons",
   "analog-pwm",
+  "rgb",
+  "sound",
   "sensors",
+  "temperature",
+  "line-sensor",
   "serial",
+  "arrays-loops",
+  "functions",
   "special-pins",
   "power",
+  "transistor",
+  "motors",
+  "memory",
+  "interrupts",
   "timing",
   "code-traps",
   "debugging",

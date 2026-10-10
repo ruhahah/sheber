@@ -1,14 +1,8 @@
 // Per-mission extras that sit on top of the mission catalog: what to light up once the
 // answer is revealed, where to read more, and which missions make up the short demo.
 
-import { closedLoopExample, missions, type Diagram } from "./missions";
-
-export type Highlight = {
-  parts?: string[];
-  terminals?: string[];
-  lines?: number[];
-  holes?: string[];
-};
+import { closedLoopExample, missions, transistorExample } from "./missions";
+import type { Diagram, Highlight, Source } from "./types";
 
 // Diagram parts and terminals, breadboard holes, and 1-based code lines, where the fault lives.
 export const highlights: Record<string, Highlight> = {
@@ -97,6 +91,56 @@ export const highlights: Record<string, Highlight> = {
   "count-resets": { lines: [7] },
   "pins-swapped-in-code": { lines: [1, 2] },
   "copy-paste-else": { lines: [10] },
+  "rgb-pins-swapped": { terminals: ["uno.9", "uno.11"], lines: [1, 3] },
+  "rgb-digital-write": { lines: [12, 13, 14] },
+  "rgb-colors-pile-up": { lines: [12, 14, 16] },
+  "rgb-common-anode": { parts: ["rgb"], lines: [12, 13, 14] },
+  "rgb-one-resistor": { parts: ["r1"] },
+  "buzzer-click": { lines: [6, 8] },
+  "tone-no-delay": { lines: [5, 6, 7] },
+  "tone-never-stops": { lines: [6, 7, 8] },
+  "tone-too-high": { lines: [5] },
+  "two-tones": { terminals: ["uno.9"], lines: [3] },
+  "temp-backwards": { parts: ["tmp"] },
+  "temp-no-offset": { lines: [8] },
+  "temp-lm35": { parts: ["tmp"], lines: [8] },
+  "temp-raw-compare": { lines: [10] },
+  "dht-analog-read": { parts: ["tmp"], lines: [6, 7, 8] },
+  "transistor-no-base-resistor": { terminals: ["uno.9", "q1.B"] },
+  "transistor-swapped": { terminals: ["q1.E", "q1.C"] },
+  "transistor-too-small": { parts: ["q1"] },
+  "transistor-no-diode": { parts: ["m1"] },
+  "transistor-diode-backwards": { parts: ["d1"] },
+  "driver-both-high": { lines: [12, 13] },
+  "driver-enable-no-pwm": { terminals: ["uno.4"], lines: [1, 14] },
+  "driver-low-speed": { lines: [14] },
+  "driver-voltage-drop": { parts: ["drv"] },
+  "driver-no-ground": { terminals: ["uno.GND"] },
+  "line-threshold": { lines: [1] },
+  "line-inverted": { lines: [7] },
+  "line-too-high": { parts: ["tmp"] },
+  "line-trimmer": { parts: ["tmp"] },
+  "line-sides-swapped": { terminals: ["uno.A0", "uno.A1"], lines: [1, 2] },
+  "loop-from-one": { terminals: ["uno.8"], lines: [4] },
+  "array-out-of-bounds": { lines: [9] },
+  "while-no-increment": { lines: [11, 14] },
+  "array-byte-overflow": { lines: [1] },
+  "loop-delay-outside": { lines: [12, 13] },
+  "function-not-called": { lines: [17] },
+  "function-no-parens": { lines: [17] },
+  "function-scope": { lines: [2, 7, 9] },
+  "function-args-swapped": { lines: [15] },
+  "function-copy": { lines: [3, 4, 12] },
+  "ram-lost-on-reset": { lines: [1] },
+  "eeprom-fresh-255": { lines: [8] },
+  "eeprom-over-255": { lines: [8, 15] },
+  "eeprom-write-in-loop": { lines: [10] },
+  "ram-full": { lines: [1] },
+  "interrupt-wrong-pin": { terminals: ["uno.4"], lines: [9, 11] },
+  "interrupt-floating": { terminals: ["uno.2"], lines: [9] },
+  "interrupt-mode-low": { lines: [10] },
+  "interrupt-time-stops": { lines: [3, 4, 5] },
+  "interrupt-no-volatile": { lines: [1, 14] },
 };
 
 const DOCS = "https://docs.arduino.cc";
@@ -110,9 +154,22 @@ const servo = ref("Servo motors", "/learn/electronics/servo-motors/");
 const serial = ref("Serial", "/language-reference/en/functions/communication/serial/");
 const unoBoard = ref("UNO R3", "/hardware/uno-rev3/");
 const analogRead = ref("analogRead()", "/language-reference/en/functions/analog-io/analogRead/");
+const tone = ref("tone()", "/language-reference/en/functions/advanced-io/tone/");
+const forLoop = ref("for", "/language-reference/en/structure/control-structure/for/");
+const arrays = ref("Arrays", "/language-reference/en/variables/data-types/array/");
+const functions = ref("Functions", "/learn/programming/functions/");
+const eeprom = ref("EEPROM library", "/learn/built-in-libraries/eeprom/");
+const interrupts = ref(
+  "attachInterrupt()",
+  "/language-reference/en/functions/external-interrupts/attachInterrupt/",
+);
+const transistorMotor = ref(
+  "Transistor motor control",
+  "/learn/electronics/transistor-motor-control/",
+);
 
 // Official Arduino documentation pages that back each mission (every link was checked).
-export const sources: Record<string, { label: string; url: string }> = {
+export const sources: Record<string, Source> = {
   "no-resistor-9v": blink,
   "wrong-pin": blink,
   "no-ground": blink,
@@ -187,6 +244,55 @@ export const sources: Record<string, { label: string; url: string }> = {
   "count-resets": ref("Language reference", "/language-reference/"),
   "pins-swapped-in-code": digitalPins,
   "copy-paste-else": ref("Language reference", "/language-reference/"),
+  "rgb-pins-swapped": analogWrite,
+  "rgb-digital-write": ref(
+    "digitalWrite()",
+    "/language-reference/en/functions/digital-io/digitalwrite/",
+  ),
+  "rgb-colors-pile-up": analogWrite,
+  "rgb-common-anode": analogWrite,
+  "buzzer-click": tone,
+  "tone-no-delay": ref("Tone melody", "/built-in-examples/digital/toneMelody/"),
+  "tone-never-stops": ref("noTone()", "/language-reference/en/functions/advanced-io/noTone/"),
+  "tone-too-high": tone,
+  "two-tones": tone,
+  "temp-backwards": analogInput,
+  "temp-no-offset": analogRead,
+  "temp-lm35": analogRead,
+  "temp-raw-compare": analogRead,
+  "transistor-no-base-resistor": transistorMotor,
+  "transistor-swapped": transistorMotor,
+  "transistor-too-small": transistorMotor,
+  "transistor-no-diode": transistorMotor,
+  "transistor-diode-backwards": transistorMotor,
+  "driver-enable-no-pwm": analogWrite,
+  "driver-low-speed": analogWrite,
+  "line-threshold": analogInput,
+  "line-inverted": digitalPins,
+  "line-sides-swapped": analogRead,
+  "loop-from-one": arrays,
+  "array-out-of-bounds": arrays,
+  "while-no-increment": ref("while", "/language-reference/en/structure/control-structure/while/"),
+  "array-byte-overflow": ref("byte", "/language-reference/en/variables/data-types/byte/"),
+  "loop-delay-outside": forLoop,
+  "function-not-called": functions,
+  "function-no-parens": functions,
+  "function-scope": ref("Scope", "/language-reference/en/variables/variable-scope-qualifiers/scope/"),
+  "function-args-swapped": functions,
+  "function-copy": ref("return", "/language-reference/en/structure/control-structure/return/"),
+  "ram-lost-on-reset": ref("Memory guide", "/learn/programming/memory-guide/"),
+  "eeprom-fresh-255": eeprom,
+  "eeprom-over-255": eeprom,
+  "eeprom-write-in-loop": eeprom,
+  "ram-full": ref("Memory guide", "/learn/programming/memory-guide/"),
+  "interrupt-wrong-pin": interrupts,
+  "interrupt-floating": interrupts,
+  "interrupt-mode-low": interrupts,
+  "interrupt-time-stops": interrupts,
+  "interrupt-no-volatile": ref(
+    "volatile",
+    "/language-reference/en/variables/variable-scope-qualifiers/volatile/",
+  ),
 };
 
 // Missions whose symptom was reproduced on a physical board. Add an id only after doing so.
@@ -202,39 +308,32 @@ const lessonFigures: Record<string, string> = {
   "led-resistor": "missing-pinmode",
   buttons: "pullup-inverted",
   sensors: "baud-mismatch",
+  rgb: "rgb-colors-pile-up",
+  sound: "tone-no-delay",
+  temperature: "temp-no-offset",
+  motors: "driver-both-high",
+  "line-sensor": "line-threshold",
+  "arrays-loops": "loop-delay-outside",
+  interrupts: "interrupt-no-volatile",
 };
 
 export function lessonFigure(slug: string): Diagram | undefined {
   if (slug === "circuit") return closedLoopExample;
+  if (slug === "transistor") return transistorExample;
   return missions.find((m) => m.id === lessonFigures[slug])?.diagram;
 }
 
-function hash(text: string) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-
-// Counts mission openings in this browser tab; part of the shuffle seed, so the options come
-// in a new order every time a mission is opened.
-let openings = 0;
-export const nextOpening = () => ++openings;
-
-// A shuffle of option indexes that is fixed for a given seed. The caller mixes the device,
-// the page load and the opening count into the seed, so nobody can learn "the answer is B".
-export function optionOrder(missionId: string, count: number, seed: number) {
-  const order = Array.from({ length: count }, (_, i) => i);
-  if (!seed) return order;
-  let s = (hash(missionId) + seed) >>> 0;
-  const random = () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+// Everything the mission page shows, picked out on the server so that the browser receives
+// one mission and not the whole catalog.
+export function missionProps(id: string | undefined) {
+  const index = missions.findIndex((m) => m.id === id);
+  if (index < 0) return null;
+  const mission = missions[index];
+  return {
+    mission,
+    index,
+    fault: highlights[mission.id],
+    source: sources[mission.id],
+    verified: verifiedOnHardware.has(mission.id),
   };
-  for (let i = count - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  return order;
 }

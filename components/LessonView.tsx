@@ -3,21 +3,32 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { Breadboard } from "@/components/Breadboard";
+import { useCatalog } from "@/components/Catalog";
 import { Diagram } from "@/components/Diagram";
 import { Status } from "@/components/Status";
-import { lessonFigure } from "@/lib/extras";
-import { lessons } from "@/lib/lessons";
-import { breadboardExample, missions } from "@/lib/missions";
 import { markLessonRead, useAppState } from "@/lib/store";
+import type { Board, Diagram as DiagramData, Lesson } from "@/lib/types";
 import { fill, ui } from "@/lib/ui";
 
-export function LessonView({ index }: { index: number }) {
+// The lesson and its pictures come from the server page; lists come from the light index.
+export function LessonView({
+  lesson,
+  index,
+  figure,
+  board,
+}: {
+  lesson: Lesson;
+  index: number;
+  // A circuit that illustrates the lesson, if it has one.
+  figure?: DiagramData;
+  // A breadboard layout, for the lesson on breadboards.
+  board?: Board;
+}) {
   const { lang, attempts } = useAppState();
   const t = ui[lang];
-  const lesson = lessons[index];
+  const { missions, lessons } = useCatalog();
   const nextLesson = lessons[index + 1];
   const practice = missions.filter((m) => m.lesson === lesson.slug);
-  const figure = lessonFigure(lesson.slug);
 
   useEffect(() => {
     document.title = `${lesson.title[lang]} · Sheber`;
@@ -47,10 +58,10 @@ export function LessonView({ index }: { index: number }) {
         ))}
       </div>
 
-      {lesson.slug === "breadboard" && (
+      {board && (
         <figure className="mt-8">
           <div className="pop overflow-x-auto">
-            <Breadboard board={breadboardExample} label={t.boardTitle} />
+            <Breadboard board={board} label={t.boardTitle} />
           </div>
           <figcaption className="mt-2 text-sm text-mute">{t.boardHint}</figcaption>
         </figure>

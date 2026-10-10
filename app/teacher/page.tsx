@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCatalog } from "@/components/Catalog";
 import { aggregate, parseResults } from "@/lib/stats";
 import { useAppState } from "@/lib/store";
 import { fill, ui } from "@/lib/ui";
@@ -13,8 +14,9 @@ export default function Teacher() {
   const { lang } = useAppState();
   const t = ui[lang];
   const [text, setText] = useState("");
-  const results = parseResults(text);
-  const summary = aggregate(results);
+  const { missions } = useCatalog();
+  const results = parseResults(missions, text);
+  const summary = aggregate(missions, results);
 
   return (
     <main>

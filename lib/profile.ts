@@ -1,16 +1,15 @@
 import type { IconName } from "@/components/Icon";
-import { lessons } from "./lessons";
-import { missions, type Text } from "./missions";
 import type { AppState } from "./store";
+import type { Catalog, Lang, Text } from "./types";
 import { ui } from "./ui";
 
 // Titles earned by the number of faults found.
 export const RANKS: { at: number; title: Text }[] = [
   { at: 0, title: { en: "Newcomer", kk: "Жаңадан бастаушы", ru: "Новичок" } },
-  { at: 8, title: { en: "Apprentice", kk: "Шәкірт", ru: "Подмастерье" } },
-  { at: 22, title: { en: "Technician", kk: "Техник", ru: "Техник" } },
-  { at: 45, title: { en: "Engineer", kk: "Инженер", ru: "Инженер" } },
-  { at: 70, title: { en: "Sheber", kk: "Шебер", ru: "Мастер" } },
+  { at: 12, title: { en: "Apprentice", kk: "Шәкірт", ru: "Подмастерье" } },
+  { at: 35, title: { en: "Technician", kk: "Техник", ru: "Техник" } },
+  { at: 70, title: { en: "Engineer", kk: "Инженер", ru: "Инженер" } },
+  { at: 110, title: { en: "Sheber", kk: "Шебер", ru: "Мастер" } },
 ];
 
 export function rankFor(found: number) {
@@ -49,7 +48,16 @@ export function streakDays(state: AppState) {
   return streak;
 }
 
-export function profileStats(state: AppState) {
+// "Level 1 · Electricity from zero", in the given language.
+export const levelTitle = (level: number, lang: Lang) =>
+  ui[lang][`level${level}` as "level1"] ?? String(level);
+
+// The levels that exist, in order, read off the missions themselves.
+export const levelsOf = ({ missions }: Catalog) =>
+  [...new Set(missions.map((m) => m.level))].sort((a, b) => a - b);
+
+export function profileStats(catalog: Catalog, state: AppState) {
+  const { missions, lessons } = catalog;
   const answered = missions.filter((m) => state.attempts[m.id]);
   const found = answered.filter((m) => state.attempts[m.id].correct).length;
   const totalMs = answered.reduce((sum, m) => sum + state.attempts[m.id].ms, 0);
@@ -59,7 +67,7 @@ export function profileStats(state: AppState) {
     accuracy: answered.length ? Math.round((found / answered.length) * 100) : 0,
     minutes: Math.round(totalMs / 60000),
     lessonsRead: lessons.filter((l) => state.lessonsRead[l.slug]).length,
-    byLevel: [1, 2, 3, 4, 5, 6, 7, 8].map((level) => {
+    byLevel: levelsOf(catalog).map((level) => {
       const inLevel = missions.filter((m) => m.level === level);
       return {
         level,
@@ -91,14 +99,14 @@ const levelHint: Text = {
 
 // "Level 1 · Basics" -> "Basics", in every language.
 const levelName = (level: number): Text => {
-  const key = `level${level}` as "level1";
-  const name = (lang: "en" | "kk" | "ru") => ui[lang][key].split(" · ")[1];
+  const name = (lang: Lang) => levelTitle(level, lang).split(" · ")[1];
   return { en: name("en"), kk: name("kk"), ru: name("ru") };
 };
 
-export function achievements(state: AppState): Achievement[] {
+export function achievements(catalog: Catalog, state: AppState): Achievement[] {
+  const { missions, lessons } = catalog;
   const attempts = Object.values(state.attempts).sort((a, b) => a.at.localeCompare(b.at));
-  const stats = profileStats(state);
+  const stats = profileStats(catalog, state);
 
   let run = 0;
   let bestRun = 0;

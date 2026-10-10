@@ -2,30 +2,23 @@
 
 import Link from "next/link";
 import { BrokenCircuit } from "@/components/BrokenCircuit";
+import { useCatalog } from "@/components/Catalog";
 import { Status } from "@/components/Status";
-import { missions } from "@/lib/missions";
+import { levelTitle, levelsOf } from "@/lib/profile";
 import { summarize } from "@/lib/stats";
 import { setState, useAppState } from "@/lib/store";
 import { fill, ui } from "@/lib/ui";
 
-const LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
-const ADVANCED_FROM = 7;
+// Levels from this one on are marked as advanced.
+const ADVANCED_FROM = 10;
 
 export default function Home() {
   const { lang, attempts, ready, nickname, welcomeDismissed } = useAppState();
   const t = ui[lang];
-  const stats = summarize(attempts);
+  const catalog = useCatalog();
+  const { missions } = catalog;
+  const stats = summarize(missions, attempts);
   const nextMission = missions.find((m) => !attempts[m.id]);
-  const levelTitle = {
-    1: t.level1,
-    2: t.level2,
-    3: t.level3,
-    4: t.level4,
-    5: t.level5,
-    6: t.level6,
-    7: t.level7,
-    8: t.level8,
-  };
 
   return (
     <main>
@@ -91,10 +84,10 @@ export default function Home() {
         </div>
       </section>
 
-      {LEVELS.map((level) => (
+      {levelsOf(catalog).map((level) => (
         <section key={level} className="mt-14">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b-[1.5px] border-edge pb-3">
-            <h2 className="font-display text-xl font-bold">{levelTitle[level]}</h2>
+            <h2 className="font-display text-xl font-bold">{levelTitle(level, lang)}</h2>
             {level >= ADVANCED_FROM && <span className="stamp mb-1 text-mute">{t.advanced}</span>}
           </div>
           <ul className="mt-5 grid gap-4 sm:grid-cols-2">

@@ -1,7 +1,10 @@
-import { missions, type FaultType } from "./missions";
 import type { Attempt } from "./store";
+import type { FaultType, MissionInfo } from "./types";
 
-export function summarize(attempts: Record<string, Attempt>) {
+// Every function here takes the mission index as its first argument (see useCatalog), so
+// this file never pulls the full mission catalog into the browser.
+
+export function summarize(missions: MissionInfo[], attempts: Record<string, Attempt>) {
   const answered = missions.filter((m) => attempts[m.id]);
   const found = answered.filter((m) => attempts[m.id].correct).length;
   const unknown = answered.filter((m) => attempts[m.id].choice === -1).length;
@@ -28,8 +31,13 @@ export function summarize(attempts: Record<string, Attempt>) {
 
 // Plain text a tester can paste into a chat; one line per mission: id,correct,choice,seconds.
 // choice is -1 when the tester picked "I don't know".
-export function resultText(nickname: string, group: string, attempts: Record<string, Attempt>) {
-  const s = summarize(attempts);
+export function resultText(
+  missions: MissionInfo[],
+  nickname: string,
+  group: string,
+  attempts: Record<string, Attempt>,
+) {
+  const s = summarize(missions, attempts);
   const lines = missions
     .filter((m) => attempts[m.id])
     .map((m) => {
@@ -50,7 +58,7 @@ type Row = { correct: boolean; choice: number; seconds: number };
 export type ParsedResult = { name: string; rows: Record<string, Row> };
 
 // Reads any number of pasted resultText() blocks back, ignoring everything it doesn't know.
-export function parseResults(text: string): ParsedResult[] {
+export function parseResults(missions: MissionInfo[], text: string): ParsedResult[] {
   const known = new Set(missions.map((m) => m.id));
   const results: ParsedResult[] = [];
   let current: ParsedResult | null = null;
@@ -90,7 +98,7 @@ export function parseResults(text: string): ParsedResult[] {
   });
 }
 
-export function aggregate(results: ParsedResult[]) {
+export function aggregate(missions: MissionInfo[], results: ParsedResult[]) {
   const perMission = missions.map((m) => {
     const rows = results.flatMap((r) => (r.rows[m.id] ? [r.rows[m.id]] : []));
     const found = rows.filter((r) => r.correct).length;

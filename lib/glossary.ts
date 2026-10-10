@@ -1,4 +1,4 @@
-import type { Lang, Text } from "./missions";
+import type { Lang, Text } from "./types";
 
 export type Term = {
   id: string;

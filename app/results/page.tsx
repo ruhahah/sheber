@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useCatalog } from "@/components/Catalog";
 import { verdict } from "@/components/Status";
-import { missions } from "@/lib/missions";
 import { resultText, summarize } from "@/lib/stats";
 import { useAppState } from "@/lib/store";
 import { faultTypeLabel, fill, ui } from "@/lib/ui";
@@ -13,7 +13,8 @@ const RING = 2 * Math.PI * 52;
 export default function Results() {
   const { lang, attempts, nickname, group } = useAppState();
   const t = ui[lang];
-  const stats = summarize(attempts);
+  const { missions } = useCatalog();
+  const stats = summarize(missions, attempts);
   const [copied, setCopied] = useState(false);
 
   if (stats.answered === 0) {
@@ -29,7 +30,7 @@ export default function Results() {
     );
   }
 
-  const text = resultText(nickname, group, attempts);
+  const text = resultText(missions, nickname, group, attempts);
 
   async function copy() {
     try {

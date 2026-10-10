@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { LANGS, type Lang } from "./missions";
+import { LANGS, type Lang } from "./types";
 
 export type Theme = "system" | "light" | "dark";
 export type TextSize = "normal" | "large";

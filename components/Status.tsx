@@ -1,4 +1,4 @@
-import type { Lang } from "@/lib/missions";
+import type { Lang } from "@/lib/types";
 import type { Attempt } from "@/lib/store";
 import { ui, type Dict } from "@/lib/ui";
 

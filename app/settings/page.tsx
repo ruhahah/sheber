@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { Avatar } from "@/components/Icon";
-import { LANGS } from "@/lib/missions";
+import { LANGS } from "@/lib/types";
 import {
   exportState,
   importState,

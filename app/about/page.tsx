@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { Text } from "@/lib/missions";
+import type { Text } from "@/lib/types";
 import { useAppState } from "@/lib/store";
 import { ui } from "@/lib/ui";
 

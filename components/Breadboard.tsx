@@ -1,4 +1,4 @@
-import type { Board } from "@/lib/missions";
+import type { Board } from "@/lib/types";
 
 const PITCH = 26;
 const X0 = 46;

@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useCatalog } from "@/components/Catalog";
 import { glossary } from "@/lib/glossary";
-import { lessons } from "@/lib/lessons";
 import { useAppState } from "@/lib/store";
 import { ui } from "@/lib/ui";
 
 export default function Learn() {
   const { lang, lessonsRead } = useAppState();
   const t = ui[lang];
+  const { lessons } = useCatalog();
 
   return (
     <main>

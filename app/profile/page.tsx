@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useCatalog } from "@/components/Catalog";
 import { AVATAR_COLORS, AVATAR_ICONS, Avatar, Icon } from "@/components/Icon";
 import { verdict } from "@/components/Status";
-import { lessons } from "@/lib/lessons";
-import { missions } from "@/lib/missions";
-import { achievements, profileStats, rankFor, streakDays } from "@/lib/profile";
+import { achievements, levelTitle, profileStats, rankFor, streakDays } from "@/lib/profile";
 import { setState, useAppState } from "@/lib/store";
 import { fill, ui } from "@/lib/ui";
 
@@ -16,20 +15,12 @@ export default function Profile() {
   const t = ui[lang];
   const [editing, setEditing] = useState(false);
 
-  const stats = profileStats(state);
+  const catalog = useCatalog();
+  const { missions, lessons } = catalog;
+  const stats = profileStats(catalog, state);
   const rank = rankFor(stats.found);
-  const badges = achievements(state);
+  const badges = achievements(catalog, state);
   const earned = badges.filter((b) => b.earned).length;
-  const levelTitle = [
-    t.level1,
-    t.level2,
-    t.level3,
-    t.level4,
-    t.level5,
-    t.level6,
-    t.level7,
-    t.level8,
-  ];
 
   const tiles = [
     { label: t.statFound, value: `${stats.found}/${missions.length}` },
@@ -147,9 +138,9 @@ export default function Profile() {
           {stats.byLevel.map(({ level, missions: inLevel, found }) => (
             <li
               key={level}
-              className="grid items-center gap-x-4 gap-y-1.5 px-5 py-3 sm:grid-cols-[16rem_1fr_3rem]"
+              className="grid items-center gap-x-4 gap-y-1.5 px-5 py-3 sm:grid-cols-[21rem_1fr_3rem]"
             >
-              <span className="font-medium">{levelTitle[level - 1]}</span>
+              <span className="font-medium">{levelTitle(level, lang)}</span>
               <span className="flex gap-1" aria-hidden="true">
                 {inLevel.map((m) => {
                   const a = state.attempts[m.id];

@@ -3,32 +3,43 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Breadboard } from "@/components/Breadboard";
+import { useCatalog } from "@/components/Catalog";
 import { Diagram } from "@/components/Diagram";
-import {
-  DEMO,
-  highlights,
-  nextOpening,
-  optionOrder,
-  sources,
-  verifiedOnHardware,
-} from "@/lib/extras";
 import { termsIn } from "@/lib/glossary";
-import { lessons } from "@/lib/lessons";
-import { missions } from "@/lib/missions";
+import { nextOpening, optionOrder } from "@/lib/shuffle";
 import { markRedeemed, recordAttempt, useAppState } from "@/lib/store";
+import type { Highlight, Mission, Source } from "@/lib/types";
 import { fill, ui } from "@/lib/ui";
 
 const LETTERS = ["A", "B", "C", "D"];
 const DONT_KNOW = -1;
 
-// demo is the 1-based step when the mission is shown as part of the three-minute tour.
-export function MissionView({ index, demo }: { index: number; demo?: number }) {
+// The mission itself and everything about it come from the server page, so the browser
+// loads one mission and not the catalog. Lists and counts come from the light index.
+export function MissionView({
+  mission,
+  index,
+  fault,
+  source,
+  verified,
+  demo,
+}: {
+  mission: Mission;
+  // The mission's position in the play order, from 0.
+  index: number;
+  // What to mark on the circuit and in the code once the answer is revealed.
+  fault?: Highlight;
+  source?: Source;
+  // True when the symptom was reproduced on a physical board.
+  verified: boolean;
+  // Set when the mission is shown as a step of the three-minute tour.
+  demo?: { step: number; total: number };
+}) {
   const { lang, attempts, primerOpen, seed, loadedAt, ready } = useAppState();
   const t = ui[lang];
-  const mission = missions[index];
+  const { missions, lessons } = useCatalog();
   const attempt = attempts[mission.id];
   const lesson = lessons.find((l) => l.slug === mission.lesson);
-  const source = sources[mission.id];
   // A new order of options on every opening of the mission and every practice run.
   const [opening, setOpening] = useState(nextOpening);
   const order = optionOrder(
@@ -64,7 +75,7 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
   const choice = practice ? practice.picked : (attempt?.choice ?? picked);
   const revealed = practice ? practice.checked : attempt !== undefined;
   const correct = choice === mission.answer;
-  const highlight = revealed ? highlights[mission.id] : undefined;
+  const highlight = revealed ? fault : undefined;
 
   function pick(option: number) {
     if (revealed) return;
@@ -116,8 +127,8 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
 
   const nextMission = missions[index + 1];
   const next = demo
-    ? demo < DEMO.length
-      ? { href: `/demo/${demo + 1}`, label: t.next }
+    ? demo.step < demo.total
+      ? { href: `/demo/${demo.step + 1}`, label: t.next }
       : { href: "/", label: t.demoDone }
     : nextMission
       ? { href: `/missions/${nextMission.id}`, label: t.next }
@@ -145,7 +156,7 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
         </Link>
         <span>
           {demo
-            ? fill(t.demoOf, { n: demo, total: DEMO.length })
+            ? fill(t.demoOf, { n: demo.step, total: demo.total })
             : fill(t.missionOf, { n: index + 1, total: missions.length })}
         </span>
       </div>
@@ -155,7 +166,7 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
       </h1>
       <p className="mt-1.5 text-sm text-mute">
         {mission.diagram.pins.length ? t.board : t.noBoard}
-        {verifiedOnHardware.has(mission.id) && (
+        {verified && (
           <span className="ml-2 font-medium text-good">✓ {t.verified}</span>
         )}
       </p>

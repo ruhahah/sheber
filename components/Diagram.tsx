@@ -1,4 +1,4 @@
-import type { Diagram as DiagramData, Lang, Part } from "@/lib/missions";
+import type { Diagram as DiagramData, Lang, Part } from "@/lib/types";
 import { ui } from "@/lib/ui";
 
 const UNO = { x: 20, y: 50, w: 110 };
@@ -341,6 +341,36 @@ function PartGlyph({ part: p, lang }: { part: Part; lang: Lang }) {
         <text x={p.x + LEN + 4} y={p.y + 24} textAnchor="end" fill={mute}>
           {p.flip ? t.legLong : t.legShort}
         </text>
+      </g>
+    );
+  }
+
+  if (p.kind === "diode") {
+    // The triangle points at the striped end, the way the current is allowed to go.
+    const s = p.flip ? -1 : 1;
+    return (
+      <g>
+        {lead(9)}
+        <polygon
+          points={`${cx - 9 * s},${p.y - 9} ${cx - 9 * s},${p.y + 9} ${cx + 9 * s},${p.y}`}
+          fill={ink}
+          stroke={ink}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+        />
+        <path d={`M${cx + 9 * s} ${p.y - 10}V${p.y + 10}`} stroke={ink} strokeWidth={3} />
+        {label(t.diode, -16)}
+      </g>
+    );
+  }
+
+  if (p.kind === "buzzer") {
+    return (
+      <g>
+        {lead(15)}
+        <circle cx={cx} cy={p.y} r={15} fill="var(--panel)" stroke={ink} strokeWidth={2} />
+        <circle cx={cx} cy={p.y} r={4} fill={ink} />
+        {label(t.buzzer, -22)}
       </g>
     );
   }

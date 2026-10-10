@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Avatar, Icon } from "@/components/Icon";
-import { LANGS } from "@/lib/missions";
+import { LANGS } from "@/lib/types";
 import { setState, useAppState } from "@/lib/store";
 import { langName, ui, type Dict } from "@/lib/ui";
 

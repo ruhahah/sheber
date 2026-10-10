@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Montserrat, Onest } from "next/font/google";
+import { CatalogProvider } from "@/components/Catalog";
 import { Shell } from "@/components/Shell";
+import { catalog } from "@/lib/catalog";
 import "./globals.css";
 
 // cyrillic-ext carries the Kazakh letters (ә, ғ, қ, ң, ө, ұ, ү, һ, і).
@@ -45,7 +47,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <Shell>{children}</Shell>
+        <CatalogProvider catalog={catalog}>
+          <Shell>{children}</Shell>
+        </CatalogProvider>
       </body>
     </html>
   );
