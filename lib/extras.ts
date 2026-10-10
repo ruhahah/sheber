@@ -1,6 +1,8 @@
 // Per-mission extras that sit on top of the mission catalog: what to light up once the
 // answer is revealed, where to read more, and which missions make up the short demo.
 
+import { closedLoopExample, missions, type Diagram } from "./missions";
+
 export type Highlight = { parts?: string[]; terminals?: string[]; lines?: number[] };
 
 // Diagram parts and terminals, and 1-based code lines, where the fault lives.
@@ -91,14 +93,19 @@ export const verifiedOnHardware = new Set<string>([]);
 // The three-minute tour: no board, first board mission, then one with a surprise.
 export const DEMO = ["open-loop", "wrong-pin", "floating-button"];
 
-// Lessons that show a circuit: lesson slug -> mission whose diagram illustrates it.
-export const lessonFigures: Record<string, string> = {
-  circuit: "low-voltage",
+// Lessons that show a circuit: lesson slug -> mission whose (correctly wired) diagram
+// illustrates it. "reading-diagrams" deliberately shows one with unconnected contacts.
+const lessonFigures: Record<string, string> = {
   "reading-diagrams": "pot-no-5v",
   "led-resistor": "missing-pinmode",
   buttons: "pullup-inverted",
   sensors: "baud-mismatch",
 };
+
+export function lessonFigure(slug: string): Diagram | undefined {
+  if (slug === "circuit") return closedLoopExample;
+  return missions.find((m) => m.id === lessonFigures[slug])?.diagram;
+}
 
 function hash(text: string) {
   let h = 2166136261;

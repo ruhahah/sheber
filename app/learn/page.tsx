@@ -7,7 +7,7 @@ import { useAppState } from "@/lib/store";
 import { ui } from "@/lib/ui";
 
 export default function Learn() {
-  const { lang } = useAppState();
+  const { lang, lessonsRead } = useAppState();
   const t = ui[lang];
 
   return (
@@ -25,6 +25,11 @@ export default function Learn() {
                 <span className="block font-semibold">{lesson.title[lang]}</span>
                 <span className="mt-1 block text-sm text-mute">{lesson.summary[lang]}</span>
               </span>
+              {lessonsRead[lesson.slug] && (
+                <span className="flex items-center pr-4">
+                  <span className="stamp text-good">{t.read}</span>
+                </span>
+              )}
             </Link>
           </li>
         ))}

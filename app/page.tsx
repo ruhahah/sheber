@@ -5,14 +5,14 @@ import { BrokenCircuit } from "@/components/BrokenCircuit";
 import { Status } from "@/components/Status";
 import { missions } from "@/lib/missions";
 import { summarize } from "@/lib/stats";
-import { useAppState } from "@/lib/store";
+import { setState, useAppState } from "@/lib/store";
 import { fill, ui } from "@/lib/ui";
 
 const LEVELS = [1, 2, 3, 4, 5, 6] as const;
 const ADVANCED_FROM = 5;
 
 export default function Home() {
-  const { lang, attempts } = useAppState();
+  const { lang, attempts, ready, nickname, welcomeDismissed } = useAppState();
   const t = ui[lang];
   const stats = summarize(attempts);
   const nextMission = missions.find((m) => !attempts[m.id]);
@@ -24,6 +24,22 @@ export default function Home() {
 
   return (
     <main>
+      {ready && !nickname.trim() && !welcomeDismissed && (
+        <aside className="note mb-8 flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4">
+          <p className="flex-1">
+            <span className="font-semibold">{t.welcomeTitle}</span> {t.welcomeText}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/profile" className="btn btn-primary">
+              {t.welcomeAction}
+            </Link>
+            <button onClick={() => setState({ welcomeDismissed: true })} className="btn">
+              {t.dismiss}
+            </button>
+          </div>
+        </aside>
+      )}
+
       <section className="grid gap-8 md:grid-cols-[1fr_20rem] md:items-center">
         <div>
           <p className="eyebrow">{t.eyebrow}</p>

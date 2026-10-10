@@ -7,7 +7,7 @@ import { DEMO, highlights, optionOrder, sources, verifiedOnHardware } from "@/li
 import { termsIn } from "@/lib/glossary";
 import { lessons } from "@/lib/lessons";
 import { missions } from "@/lib/missions";
-import { recordAttempt, useAppState } from "@/lib/store";
+import { markRedeemed, recordAttempt, useAppState } from "@/lib/store";
 import { fill, ui } from "@/lib/ui";
 
 const LETTERS = ["A", "B", "C", "D"];
@@ -15,7 +15,7 @@ const DONT_KNOW = -1;
 
 // demo is the 1-based step when the mission is shown as part of the three-minute tour.
 export function MissionView({ index, demo }: { index: number; demo?: number }) {
-  const { lang, attempts, primerOpen, seed } = useAppState();
+  const { lang, attempts, primerOpen, seed, ready } = useAppState();
   const t = ui[lang];
   const mission = missions[index];
   const attempt = attempts[mission.id];
@@ -62,6 +62,7 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
     if (choice === null) return;
     if (practice) {
       setPractice({ picked: choice, checked: true });
+      if (correct && attempt && !attempt.correct) markRedeemed(mission.id);
       return;
     }
     const c = clock.current;
@@ -72,6 +73,32 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
       at: new Date().toISOString(),
     });
   }
+
+  // A–D or 1–4 pick an option, "?" picks "I don't know", Enter checks. Re-bound on every
+  // render so the handler always sees the current choice.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select") || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "Enter") {
+        // Enter on a link or button does that control's own job, except on an answer
+        // option, where it confirms the choice (otherwise click-then-Enter would do nothing).
+        const control = target?.closest("a, button, summary");
+        if (control && !control.hasAttribute("data-option")) return;
+        e.preventDefault();
+        check();
+        return;
+      }
+      const position = "abcd".indexOf(e.key.toLowerCase()) + 1 || "1234".indexOf(e.key) + 1;
+      if (e.key.length === 1 && position > 0 && position <= order.length) {
+        pick(order[position - 1]);
+      } else if (e.key === "?") {
+        pick(DONT_KNOW);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   const nextMission = missions[index + 1];
   const next = demo
@@ -227,13 +254,16 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
 
       <Section title={t.question} id="answer">
         {practice && <p className="mb-3 text-sm text-mute">{t.practiceNote}</p>}
-        <div className="space-y-2.5">
+        {/* Hidden until the saved state is read: the order of options depends on it, and
+            they would visibly jump otherwise. */}
+        <div className={`space-y-2.5 ${ready ? "" : "invisible"}`}>
           {order.map((option, position) => {
             const isAnswer = revealed && option === mission.answer;
             const isWrongPick = revealed && option === choice && !correct;
             return (
               <button
                 key={option}
+                data-option
                 disabled={revealed}
                 onClick={() => pick(option)}
                 aria-pressed={choice === option}
@@ -253,6 +283,7 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
             );
           })}
           <button
+            data-option
             disabled={revealed}
             onClick={() => pick(DONT_KNOW)}
             aria-pressed={choice === DONT_KNOW}

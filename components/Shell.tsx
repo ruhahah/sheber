@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { Avatar, Icon } from "@/components/Icon";
 import { LANGS } from "@/lib/missions";
 import { setState, useAppState } from "@/lib/store";
 import { langName, ui, type Dict } from "@/lib/ui";
@@ -11,11 +12,22 @@ const NAV: { href: string; label: keyof Dict; active: (path: string) => boolean 
   {
     href: "/",
     label: "navMissions",
-    active: (p) => p === "/" || p.startsWith("/missions"),
+    active: (p) => p === "/" || p.startsWith("/missions") || p.startsWith("/demo"),
   },
   { href: "/learn", label: "navLearn", active: (p) => p.startsWith("/learn") },
-  { href: "/results", label: "navResults", active: (p) => p.startsWith("/results") },
-  { href: "/settings", label: "navSettings", active: (p) => p.startsWith("/settings") },
+  {
+    href: "/results",
+    label: "navResults",
+    active: (p) => p.startsWith("/results") || p.startsWith("/teacher"),
+  },
+  { href: "/profile", label: "navProfile", active: (p) => p.startsWith("/profile") },
+];
+
+// Pages outside the main navigation, for the browser tab title.
+const OTHER: { prefix: string; label: keyof Dict }[] = [
+  { prefix: "/teacher", label: "teacherTitle" },
+  { prefix: "/settings", label: "navSettings" },
+  { prefix: "/about", label: "about" },
 ];
 
 function toggleTheme() {
@@ -27,30 +39,32 @@ function toggleTheme() {
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { lang, theme } = useAppState();
+  const { lang, theme, textSize, reduceMotion, avatarColor, avatarIcon } = useAppState();
   const pathname = usePathname();
   const t = ui[lang];
 
+  // Mirror the settings onto <html>; the stylesheet reads them from there.
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "system") delete root.dataset.theme;
     else root.dataset.theme = theme;
+    root.dataset.size = textSize;
+    root.dataset.motion = reduceMotion ? "reduced" : "full";
     root.lang = lang;
     // The inline script in the layout hides the page until the saved language is applied.
     root.classList.remove("pending");
-  }, [theme, lang]);
+  }, [theme, lang, textSize, reduceMotion]);
 
   // Mission and lesson pages name the tab themselves.
   useEffect(() => {
     if (/^\/(missions|learn|demo)\/./.test(pathname)) return;
-    const section = NAV.find((item) => item.href !== "/" && item.active(pathname));
-    const name = section
-      ? t[section.label]
-      : pathname.startsWith("/teacher")
-        ? t.teacherTitle
-        : "";
-    document.title = name ? `${name} · Sheber` : "Sheber";
+    const label =
+      OTHER.find((o) => pathname.startsWith(o.prefix))?.label ??
+      NAV.find((item) => item.href !== "/" && item.active(pathname))?.label;
+    document.title = label ? `${t[label]} · Sheber` : "Sheber";
   }, [pathname, t]);
+
+  const settingsActive = pathname.startsWith("/settings");
 
   return (
     <>
@@ -85,12 +99,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-md border-[1.5px] px-2 py-1 font-medium sm:px-3 ${
+                  className={`flex items-center gap-1.5 rounded-md border-[1.5px] px-1.5 py-1 font-medium sm:px-3 ${
                     active
                       ? "border-edge bg-panel text-ink"
                       : "border-transparent text-mute hover:text-ink"
                   }`}
                 >
+                  {item.href === "/profile" && (
+                    <Avatar color={avatarColor} icon={avatarIcon} size={20} />
+                  )}
                   {t[item.label]}
                 </Link>
               );
@@ -105,7 +122,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   onClick={() => setState({ lang: l })}
                   aria-pressed={lang === l}
                   title={langName[l].full}
-                  className={`px-2.5 py-1.5 ${
+                  className={`px-2 py-1.5 sm:px-2.5 ${
                     lang === l
                       ? "bg-accent font-bold text-accent-ink"
                       : "bg-panel text-mute hover:text-ink"
@@ -126,11 +143,39 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <path d="M10 3a7 7 0 0 1 0 14z" fill="currentColor" />
               </svg>
             </button>
+            <Link
+              href="/settings"
+              aria-label={t.navSettings}
+              title={t.navSettings}
+              aria-current={settingsActive ? "page" : undefined}
+              className={`rounded-md border-[1.5px] border-edge p-1.5 hover:text-accent-text ${
+                settingsActive ? "bg-accent text-accent-ink" : "bg-panel"
+              }`}
+            >
+              <Icon name="gear" size={18} />
+            </Link>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-6 sm:pt-10">{children}</div>
+      <div className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-20 sm:pt-10">{children}</div>
+
+      <footer className="border-t-[1.5px] border-edge bg-panel/60">
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 py-6 text-sm">
+          <p className="max-w-md text-mute">{t.aboutNote}</p>
+          <nav className="flex flex-wrap gap-x-5 gap-y-1 font-medium">
+            <Link href="/about" className="hover:text-accent-text">
+              {t.aboutLink}
+            </Link>
+            <Link href="/teacher" className="hover:text-accent-text">
+              {t.teacherTitle}
+            </Link>
+            <Link href="/settings" className="hover:text-accent-text">
+              {t.navSettings}
+            </Link>
+          </nav>
+        </div>
+      </footer>
     </>
   );
 }

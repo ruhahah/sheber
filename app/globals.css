@@ -106,6 +106,24 @@ html.pending body {
   visibility: hidden;
 }
 
+/* Settings → Text size. Everything is sized in rem, so this scales the whole page. */
+html[data-size="large"] {
+  font-size: 112.5%;
+}
+
+/* Settings → Reduce animation. */
+html[data-motion="reduced"] {
+  scroll-behavior: auto !important;
+}
+
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
 button:not(:disabled),
 summary {
   cursor: pointer;

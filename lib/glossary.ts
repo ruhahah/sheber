@@ -9,8 +9,9 @@ export type Term = {
 };
 
 const same = (s: string): Text => ({ en: s, kk: s, ru: s });
-// "ток" but not "поток": no Cyrillic letter directly before it.
-const tok = /(?<![а-яёәғқңөұүһі])ток/i;
+// "ток" but not "поток": no Cyrillic letter directly before it. Written without a
+// lookbehind, which older Safari cannot parse (it would break the whole page).
+const tok = /(^|[^а-яёәғқңөұүһі])ток/i;
 
 export const glossary: Term[] = [
   {

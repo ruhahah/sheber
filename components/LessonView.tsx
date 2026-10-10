@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { Diagram } from "@/components/Diagram";
 import { Status } from "@/components/Status";
-import { lessonFigures } from "@/lib/extras";
+import { lessonFigure } from "@/lib/extras";
 import { lessons } from "@/lib/lessons";
 import { missions } from "@/lib/missions";
-import { useAppState } from "@/lib/store";
+import { markLessonRead, useAppState } from "@/lib/store";
 import { fill, ui } from "@/lib/ui";
 
 export function LessonView({ index }: { index: number }) {
@@ -16,11 +16,15 @@ export function LessonView({ index }: { index: number }) {
   const lesson = lessons[index];
   const nextLesson = lessons[index + 1];
   const practice = missions.filter((m) => m.lesson === lesson.slug);
-  const figure = missions.find((m) => m.id === lessonFigures[lesson.slug]);
+  const figure = lessonFigure(lesson.slug);
 
   useEffect(() => {
     document.title = `${lesson.title[lang]} · Sheber`;
   }, [lesson, lang]);
+
+  useEffect(() => {
+    markLessonRead(lesson.slug);
+  }, [lesson.slug]);
 
   return (
     <main className="mx-auto max-w-2xl">
@@ -50,7 +54,7 @@ export function LessonView({ index }: { index: number }) {
       {figure && (
         <figure className="mt-8">
           <div className="pop overflow-x-auto">
-            <Diagram diagram={figure.diagram} lang={lang} />
+            <Diagram diagram={figure} lang={lang} />
           </div>
           <figcaption className="mt-2 text-sm text-mute">{t.figure}</figcaption>
         </figure>

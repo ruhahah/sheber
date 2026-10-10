@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useAppState } from "@/lib/store";
 import { ui } from "@/lib/ui";
 
 export default function NotFound() {
   const { lang } = useAppState();
   const t = ui[lang];
+
+  useEffect(() => {
+    document.title = `${t.notFoundTitle} · Sheber`;
+  }, [t]);
 
   return (
     <main>

@@ -2613,6 +2613,20 @@ void loop() {
   },
 ];
 
+// A complete, working battery circuit: the illustration for the lesson on closed loops.
+export const closedLoopExample: Diagram = batteryCircuit(
+  "4.5",
+  [
+    { id: "r1", kind: "resistor", label: "220 Ω", x: 230, y: 100 },
+    { id: "d1", kind: "led", x: 350, y: 100 },
+  ],
+  [
+    ["r1.a", "5V"],
+    ["r1.b", "d1.a"],
+    ["d1.b", "GND"],
+  ],
+);
+
 // The order missions are played in; a mission's level is its group here.
 const LEVELS: string[][] = [
   ["open-loop", "short-wire", "low-voltage", "no-resistor-9v"],

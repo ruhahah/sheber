@@ -11,7 +11,7 @@ import { faultTypeLabel, fill, ui } from "@/lib/ui";
 const RING = 2 * Math.PI * 52;
 
 export default function Results() {
-  const { lang, attempts, nickname } = useAppState();
+  const { lang, attempts, nickname, group } = useAppState();
   const t = ui[lang];
   const stats = summarize(attempts);
   const [copied, setCopied] = useState(false);
@@ -29,7 +29,7 @@ export default function Results() {
     );
   }
 
-  const text = resultText(nickname, attempts);
+  const text = resultText(nickname, group, attempts);
 
   async function copy() {
     try {

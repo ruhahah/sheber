@@ -28,7 +28,7 @@ export function summarize(attempts: Record<string, Attempt>) {
 
 // Plain text a tester can paste into a chat; one line per mission: id,correct,choice,seconds.
 // choice is -1 when the tester picked "I don't know".
-export function resultText(nickname: string, attempts: Record<string, Attempt>) {
+export function resultText(nickname: string, group: string, attempts: Record<string, Attempt>) {
   const s = summarize(attempts);
   const lines = missions
     .filter((m) => attempts[m.id])
@@ -39,6 +39,7 @@ export function resultText(nickname: string, attempts: Record<string, Attempt>) 
   return [
     "Sheber result",
     `name: ${nickname.trim() || "-"}`,
+    `group: ${group.trim() || "-"}`,
     `score: ${s.found}/${s.total} (answered ${s.answered})`,
     `avg_seconds: ${s.avgSeconds}`,
     ...lines,
@@ -62,9 +63,11 @@ export function parseResults(text: string): ParsedResult[] {
       continue;
     }
     if (!current) continue;
-    const name = line.match(/^name:\s*(.*)$/i);
-    if (name) {
-      current.name = name[1] || "-";
+    // name and group both identify the tester; keep them together so two different
+    // "Aruzhan"s from different classes are not mistaken for a duplicate.
+    const who = line.match(/^(name|group):\s*(.*)$/i);
+    if (who) {
+      current.name = who[1].toLowerCase() === "name" ? who[2] || "-" : `${current.name} · ${who[2]}`;
       continue;
     }
     const row = line.match(/^([a-z0-9-]+),([01]),(-?\d+),(\d+)$/);
@@ -76,7 +79,15 @@ export function parseResults(text: string): ParsedResult[] {
       };
     }
   }
-  return results.filter((r) => Object.keys(r.rows).length > 0);
+  // The same block pasted twice (a tester re-sent it, or it was copied twice) counts once.
+  const seen = new Set<string>();
+  return results.filter((r) => {
+    if (Object.keys(r.rows).length === 0) return false;
+    const key = JSON.stringify(r);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function aggregate(results: ParsedResult[]) {

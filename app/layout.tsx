@@ -23,10 +23,11 @@ export const metadata: Metadata = {
   description: "Learn robotics by fixing what's broken.",
 };
 
-// Runs before first paint: applies a saved light/dark choice, and when the saved language is
-// not English keeps the page hidden until it is applied, so no English text flashes by.
+// Runs before first paint: applies the saved theme, text size and motion setting, and for a
+// returning visitor keeps the page hidden until their saved language and progress are
+// applied, so the default English page with zero progress never flashes by.
 // The timeout is a safety net in case the app never starts.
-const themeScript = `try{var s=JSON.parse(localStorage.getItem("sheber:v1")||"{}"),d=document.documentElement;if(s.theme==="light"||s.theme==="dark")d.dataset.theme=s.theme;if(s.lang&&s.lang!=="en"){d.classList.add("pending");setTimeout(function(){d.classList.remove("pending")},1500)}}catch(e){}`;
+const themeScript = `try{var r=localStorage.getItem("sheber:v1"),s=JSON.parse(r||"{}"),d=document.documentElement;if(s.theme==="light"||s.theme==="dark")d.dataset.theme=s.theme;if(s.textSize==="large")d.dataset.size="large";if(s.reduceMotion)d.dataset.motion="reduced";if(r){d.classList.add("pending");setTimeout(function(){d.classList.remove("pending")},1500)}}catch(e){}`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
