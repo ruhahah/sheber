@@ -7,10 +7,10 @@ import { ui } from "./ui";
 // Titles earned by the number of faults found.
 export const RANKS: { at: number; title: Text }[] = [
   { at: 0, title: { en: "Newcomer", kk: "Жаңадан бастаушы", ru: "Новичок" } },
-  { at: 4, title: { en: "Apprentice", kk: "Шәкірт", ru: "Подмастерье" } },
-  { at: 11, title: { en: "Technician", kk: "Техник", ru: "Техник" } },
-  { at: 20, title: { en: "Engineer", kk: "Инженер", ru: "Инженер" } },
-  { at: 30, title: { en: "Sheber", kk: "Шебер", ru: "Мастер" } },
+  { at: 8, title: { en: "Apprentice", kk: "Шәкірт", ru: "Подмастерье" } },
+  { at: 22, title: { en: "Technician", kk: "Техник", ru: "Техник" } },
+  { at: 45, title: { en: "Engineer", kk: "Инженер", ru: "Инженер" } },
+  { at: 70, title: { en: "Sheber", kk: "Шебер", ru: "Мастер" } },
 ];
 
 export function rankFor(found: number) {
@@ -59,7 +59,7 @@ export function profileStats(state: AppState) {
     accuracy: answered.length ? Math.round((found / answered.length) * 100) : 0,
     minutes: Math.round(totalMs / 60000),
     lessonsRead: lessons.filter((l) => state.lessonsRead[l.slug]).length,
-    byLevel: [1, 2, 3, 4, 5, 6].map((level) => {
+    byLevel: [1, 2, 3, 4, 5, 6, 7, 8].map((level) => {
       const inLevel = missions.filter((m) => m.level === level);
       return {
         level,

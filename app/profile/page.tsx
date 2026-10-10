@@ -20,7 +20,16 @@ export default function Profile() {
   const rank = rankFor(stats.found);
   const badges = achievements(state);
   const earned = badges.filter((b) => b.earned).length;
-  const levelTitle = [t.level1, t.level2, t.level3, t.level4, t.level5, t.level6];
+  const levelTitle = [
+    t.level1,
+    t.level2,
+    t.level3,
+    t.level4,
+    t.level5,
+    t.level6,
+    t.level7,
+    t.level8,
+  ];
 
   const tiles = [
     { label: t.statFound, value: `${stats.found}/${missions.length}` },

@@ -8,19 +8,24 @@ import { summarize } from "@/lib/stats";
 import { setState, useAppState } from "@/lib/store";
 import { fill, ui } from "@/lib/ui";
 
-const LEVELS = [1, 2, 3, 4, 5, 6] as const;
-const ADVANCED_FROM = 5;
+const LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+const ADVANCED_FROM = 7;
 
 export default function Home() {
   const { lang, attempts, ready, nickname, welcomeDismissed } = useAppState();
   const t = ui[lang];
   const stats = summarize(attempts);
   const nextMission = missions.find((m) => !attempts[m.id]);
-  // Level titles read "Level 1 · Basics"; the number is shown separately, large.
-  const levelName = (level: (typeof LEVELS)[number]) =>
-    ({ 1: t.level1, 2: t.level2, 3: t.level3, 4: t.level4, 5: t.level5, 6: t.level6 })[
-      level
-    ].split(" · ")[1];
+  const levelTitle = {
+    1: t.level1,
+    2: t.level2,
+    3: t.level3,
+    4: t.level4,
+    5: t.level5,
+    6: t.level6,
+    7: t.level7,
+    8: t.level8,
+  };
 
   return (
     <main>
@@ -88,9 +93,8 @@ export default function Home() {
 
       {LEVELS.map((level) => (
         <section key={level} className="mt-14">
-          <div className="flex flex-wrap items-end gap-x-4 gap-y-1 border-b-[1.5px] border-edge pb-3">
-            <span className="outline-num text-6xl">{level}</span>
-            <h2 className="font-display text-xl font-bold">{levelName(level)}</h2>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b-[1.5px] border-edge pb-3">
+            <h2 className="font-display text-xl font-bold">{levelTitle[level]}</h2>
             {level >= ADVANCED_FROM && <span className="stamp mb-1 text-mute">{t.advanced}</span>}
           </div>
           <ul className="mt-5 grid gap-4 sm:grid-cols-2">

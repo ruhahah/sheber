@@ -275,14 +275,6 @@ summary {
     box-shadow: 4px 4px 0 var(--drop);
     transform: rotate(-0.6deg);
   }
-
-  .outline-num {
-    font-family: var(--font-display);
-    font-weight: 800;
-    line-height: 1;
-    color: transparent;
-    -webkit-text-stroke: 1.5px var(--ink);
-  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

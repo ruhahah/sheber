@@ -3,9 +3,14 @@
 
 import { closedLoopExample, missions, type Diagram } from "./missions";
 
-export type Highlight = { parts?: string[]; terminals?: string[]; lines?: number[] };
+export type Highlight = {
+  parts?: string[];
+  terminals?: string[];
+  lines?: number[];
+  holes?: string[];
+};
 
-// Diagram parts and terminals, and 1-based code lines, where the fault lives.
+// Diagram parts and terminals, breadboard holes, and 1-based code lines, where the fault lives.
 export const highlights: Record<string, Highlight> = {
   "open-loop": { terminals: ["d1.b", "bat.−"] },
   "short-wire": { parts: ["j1"] },
@@ -40,6 +45,58 @@ export const highlights: Record<string, Highlight> = {
   "int-division": { lines: [7] },
   "button-bounce": { parts: ["sw"] },
   "serial-pins": { terminals: ["uno.0", "uno.1"] },
+  "dim-on-battery": { parts: ["r1"] },
+  "gnd-to-5v": { terminals: ["d1.b", "uno.5V"] },
+  "button-to-5v": { terminals: ["sw.b"] },
+  "serial-no-begin": { lines: [1, 2] },
+  "print-no-newline": { lines: [7] },
+  "pot-wrong-pin": { terminals: ["uno.A1"], lines: [6] },
+  "sonar-no-gnd": { terminals: ["hc.GND", "uno.GND"] },
+  "servo-wrong-pin": { terminals: ["uno.6"], lines: [6] },
+  "battery-on-5v-pin": { terminals: ["uno.5V", "uno.Vin"] },
+  "toggle-held": { lines: [9, 10] },
+  "millis-no-update": { lines: [9] },
+  "semicolon-after-if": { lines: [8] },
+  "servo-kills-pwm": { terminals: ["uno.10"], lines: [1, 13] },
+  "bb-same-row": { holes: ["7d", "7e"] },
+  "bb-one-off": { holes: ["7c", "8e"] },
+  "bb-split-rail": { holes: ["-7", "-8"] },
+  "both-ends-gnd": { terminals: ["r1.a", "uno.8"] },
+  "pot-both-5v": { terminals: ["pot.3", "uno.GND"] },
+  "button-wrong-pin": { terminals: ["uno.2"], lines: [2, 7] },
+  "gap-in-the-middle": { terminals: ["r1.b", "d1.a"] },
+  "led-backwards-battery": { parts: ["d1"] },
+  "blue-on-3v": { parts: ["bat"] },
+  "too-bright-9v": { parts: ["r1"] },
+  "led-on-5v": { terminals: ["r1.a", "uno.8"] },
+  "second-led-forgotten": { terminals: ["uno.9"], lines: [2, 6, 8] },
+  "missing-brace": { lines: [1, 3] },
+  "wrong-capital": { lines: [6] },
+  "delay-units": { lines: [7, 9] },
+  "pinmode-other-pin": { lines: [2] },
+  "resistor-too-small": { parts: ["r1"] },
+  "active-low-led": { terminals: ["r1.b", "uno.5V"] },
+  "button-no-pullup": { lines: [2] },
+  "button-read-once": { lines: [6] },
+  "bb-resistor-bypassed": { holes: ["3c", "3d"] },
+  "bb-across-gap": { holes: ["7e", "7f"] },
+  "pwm-percent": { lines: [6] },
+  "fade-no-delay": { lines: [7] },
+  "threshold-reversed": { lines: [7] },
+  "pot-on-3v3": { terminals: ["uno.3.3V"] },
+  "serial-write": { lines: [7] },
+  "serial-quotes": { lines: [7] },
+  "sonar-no-trig": { terminals: ["hc.Trig", "uno.9"] },
+  "servo-no-signal": { terminals: ["servo.Signal", "uno.9"] },
+  "led-on-tx": { terminals: ["uno.1"], lines: [2, 3] },
+  "analog-read-digital-pin": { terminals: ["uno.3"], lines: [6] },
+  "battery-reversed": { terminals: ["bat.+", "bat.−"] },
+  "servo-on-3v3": { terminals: ["uno.3.3V"] },
+  "two-rates": { lines: [8, 10, 13, 15] },
+  "minute-overflow": { lines: [7, 9] },
+  "count-resets": { lines: [7] },
+  "pins-swapped-in-code": { lines: [1, 2] },
+  "copy-paste-else": { lines: [10] },
 };
 
 const DOCS = "https://docs.arduino.cc";
@@ -50,6 +107,9 @@ const digitalPins = ref("Digital pins", "/learn/microcontrollers/digital-pins/")
 const analogInput = ref("Analog input", "/learn/microcontrollers/analog-input/");
 const analogWrite = ref("analogWrite()", "/language-reference/en/functions/analog-io/analogWrite/");
 const servo = ref("Servo motors", "/learn/electronics/servo-motors/");
+const serial = ref("Serial", "/language-reference/en/functions/communication/serial/");
+const unoBoard = ref("UNO R3", "/hardware/uno-rev3/");
+const analogRead = ref("analogRead()", "/language-reference/en/functions/analog-io/analogRead/");
 
 // Official Arduino documentation pages that back each mission (every link was checked).
 export const sources: Record<string, { label: string; url: string }> = {
@@ -72,7 +132,7 @@ export const sources: Record<string, { label: string; url: string }> = {
   ),
   "analogwrite-overflow": analogWrite,
   "ldr-no-divider": analogInput,
-  "baud-mismatch": ref("Serial", "/language-reference/en/functions/communication/serial/"),
+  "baud-mismatch": serial,
   "sonar-swapped": ref("pulseIn()", "/language-reference/en/functions/advanced-io/pulseIn/"),
   "i2c-swapped": ref("Wire (I2C)", "/language-reference/en/functions/communication/wire/"),
   "button-short": digitalPins,
@@ -84,7 +144,49 @@ export const sources: Record<string, { label: string; url: string }> = {
   "assign-in-if": ref("Language reference", "/language-reference/"),
   "int-division": ref("int", "/language-reference/en/variables/data-types/int/"),
   "button-bounce": ref("Debounce", "/built-in-examples/digital/Debounce/"),
-  "serial-pins": ref("UNO R3", "/hardware/uno-rev3/"),
+  "serial-pins": unoBoard,
+  "gnd-to-5v": blink,
+  "button-to-5v": digitalPins,
+  "serial-no-begin": serial,
+  "print-no-newline": serial,
+  "pot-wrong-pin": analogInput,
+  "sonar-no-gnd": ref("pulseIn()", "/language-reference/en/functions/advanced-io/pulseIn/"),
+  "servo-wrong-pin": servo,
+  "battery-on-5v-pin": unoBoard,
+  "toggle-held": digitalPins,
+  "millis-no-update": ref("Blink Without Delay", "/built-in-examples/digital/BlinkWithoutDelay/"),
+  "semicolon-after-if": ref("Language reference", "/language-reference/"),
+  "servo-kills-pwm": servo,
+  "both-ends-gnd": blink,
+  "pot-both-5v": analogInput,
+  "button-wrong-pin": digitalPins,
+  "led-on-5v": blink,
+  "second-led-forgotten": blink,
+  "missing-brace": sketches,
+  "wrong-capital": sketches,
+  "delay-units": ref("delay()", "/language-reference/en/functions/time/delay/"),
+  "pinmode-other-pin": ref("pinMode()", "/language-reference/en/functions/digital-io/pinMode/"),
+  "resistor-too-small": blink,
+  "active-low-led": digitalPins,
+  "button-no-pullup": digitalPins,
+  "button-read-once": digitalPins,
+  "pwm-percent": analogWrite,
+  "fade-no-delay": analogWrite,
+  "threshold-reversed": analogInput,
+  "pot-on-3v3": analogRead,
+  "serial-write": serial,
+  "serial-quotes": serial,
+  "sonar-no-trig": ref("pulseIn()", "/language-reference/en/functions/advanced-io/pulseIn/"),
+  "servo-no-signal": servo,
+  "led-on-tx": unoBoard,
+  "analog-read-digital-pin": analogRead,
+  "battery-reversed": unoBoard,
+  "servo-on-3v3": unoBoard,
+  "two-rates": ref("Blink Without Delay", "/built-in-examples/digital/BlinkWithoutDelay/"),
+  "minute-overflow": ref("int", "/language-reference/en/variables/data-types/int/"),
+  "count-resets": ref("Language reference", "/language-reference/"),
+  "pins-swapped-in-code": digitalPins,
+  "copy-paste-else": ref("Language reference", "/language-reference/"),
 };
 
 // Missions whose symptom was reproduced on a physical board. Add an id only after doing so.
@@ -113,8 +215,13 @@ function hash(text: string) {
   return h >>> 0;
 }
 
-// A stable shuffle of option indexes: the same on every visit from one device, different
-// between devices, so classmates cannot pass each other "the answer is B".
+// Counts mission openings in this browser tab; part of the shuffle seed, so the options come
+// in a new order every time a mission is opened.
+let openings = 0;
+export const nextOpening = () => ++openings;
+
+// A shuffle of option indexes that is fixed for a given seed. The caller mixes the device,
+// the page load and the opening count into the seed, so nobody can learn "the answer is B".
 export function optionOrder(missionId: string, count: number, seed: number) {
   const order = Array.from({ length: count }, (_, i) => i);
   if (!seed) return order;

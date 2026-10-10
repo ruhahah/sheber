@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { Breadboard } from "@/components/Breadboard";
 import { Diagram } from "@/components/Diagram";
 import { Status } from "@/components/Status";
 import { lessonFigure } from "@/lib/extras";
 import { lessons } from "@/lib/lessons";
-import { missions } from "@/lib/missions";
+import { breadboardExample, missions } from "@/lib/missions";
 import { markLessonRead, useAppState } from "@/lib/store";
 import { fill, ui } from "@/lib/ui";
 
@@ -35,21 +36,25 @@ export function LessonView({ index }: { index: number }) {
         <span>{fill(t.lessonOf, { n: index + 1, total: lessons.length })}</span>
       </div>
 
-      <div className="mt-5 flex items-start gap-4">
-        <span className="outline-num text-6xl">{String(index + 1).padStart(2, "0")}</span>
-        <div>
-          <h1 className="font-display text-2xl leading-tight font-bold text-balance sm:text-3xl">
-            {lesson.title[lang]}
-          </h1>
-          <p className="mt-2 text-lg text-mute">{lesson.summary[lang]}</p>
-        </div>
-      </div>
+      <h1 className="mt-5 font-display text-2xl leading-tight font-bold text-balance sm:text-3xl">
+        {lesson.title[lang]}
+      </h1>
+      <p className="mt-2 text-lg text-mute">{lesson.summary[lang]}</p>
 
       <div className="mt-8 space-y-4 text-lg leading-relaxed">
         {lesson.body.map((paragraph, i) => (
           <p key={i}>{paragraph[lang]}</p>
         ))}
       </div>
+
+      {lesson.slug === "breadboard" && (
+        <figure className="mt-8">
+          <div className="pop overflow-x-auto">
+            <Breadboard board={breadboardExample} label={t.boardTitle} />
+          </div>
+          <figcaption className="mt-2 text-sm text-mute">{t.boardHint}</figcaption>
+        </figure>
+      )}
 
       {figure && (
         <figure className="mt-8">

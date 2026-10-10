@@ -28,14 +28,33 @@ export type Diagram = {
   railLabels?: [top: string, bottom: string];
 };
 
+// A breadboard seen from above. A hole is "<row><letter>" such as "7c" (numbered rows of
+// five, letters a-e above the middle gap and f-j below), or "+<row>" / "-<row>" on the
+// two power rails.
+export type BoardItem =
+  | { kind: "resistor"; from: string; to: string; label: string }
+  | { kind: "led"; long: string; short: string }
+  | { kind: "wire"; from: string; to: string }
+  // A wire that leaves the board for the Arduino; the label says where it goes.
+  | { kind: "lead"; at: string; label: string };
+
+export type Board = {
+  rows: number;
+  // The power rails are cut after this row, as on many real boards.
+  railSplitAfter?: number;
+  items: BoardItem[];
+};
+
 export type Mission = {
   id: string;
-  level: 1 | 2 | 3 | 4 | 5 | 6;
+  level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   lesson: string;
   title: Text;
   primer: Text;
   goal: Text;
   diagram: Diagram;
+  // How the circuit was actually built, when the fault is in the build and not the plan.
+  board?: Board;
   wiring: { from: Text; to: Text }[];
   code: string;
   symptom: Text;
@@ -81,6 +100,7 @@ const potLeg3: Text = {
 };
 const potTitle: Text = { en: "Potentiometer", kk: "Потенциометр", ru: "Потенциометр" };
 const servoTitle: Text = { en: "Servo MG996R", kk: "Серво MG996R", ru: "Серво MG996R" };
+const smallServoTitle: Text = { en: "Servo SG90", kk: "Серво SG90", ru: "Серво SG90" };
 const servoV: Text = { en: "Servo V+", kk: "Серво V+", ru: "Серво V+" };
 const servoSignal: Text = { en: "Servo Signal", kk: "Серво Signal", ru: "Серво Signal" };
 const servoGnd: Text = { en: "Servo GND", kk: "Серво GND", ru: "Серво GND" };
@@ -236,6 +256,194 @@ const potWiring = [
   { from: potLeg2, to: same("A0") },
   { from: potLeg3, to: same("GND") },
 ];
+
+// Texts and circuits that several missions share.
+const oNotOutput: Text = {
+  en: "Pin 8 is never set as OUTPUT",
+  kk: "8-пин OUTPUT режиміне қойылмаған",
+  ru: "Пин 8 не настроен как OUTPUT",
+};
+const oRes220Large: Text = {
+  en: "The 220 Ω resistor is too large",
+  kk: "220 Ом резистор тым үлкен",
+  ru: "Резистор 220 Ом слишком большой",
+};
+const oLoopOpen: Text = {
+  en: "The loop is not closed",
+  kk: "Тізбек тұйықталмаған",
+  ru: "Цепь не замкнута",
+};
+const oBaud: Text = {
+  en: "The sketch and the Serial Monitor use different baud rates",
+  kk: "Скетч пен Serial Monitor әртүрлі бод жылдамдығын қолданады",
+  ru: "В скетче и в Serial Monitor выбрана разная скорость",
+};
+const oPotWorn: Text = {
+  en: "The potentiometer is worn out",
+  kk: "Потенциометр тозған",
+  ru: "Потенциометр износился",
+};
+const oButtonResistor: Text = {
+  en: "The button needs an external resistor",
+  kk: "Батырмаға сыртқы резистор керек",
+  ru: "Кнопке нужен внешний резистор",
+};
+const oCheckHigh: Text = {
+  en: "The code should check for HIGH instead of LOW",
+  kk: "Код LOW орнына HIGH мәнін тексеруі керек",
+  ru: "Код должен проверять HIGH вместо LOW",
+};
+const oNoPwm9: Text = {
+  en: "Pin 9 cannot produce PWM",
+  kk: "9-пин ШИМ (PWM) шығара алмайды",
+  ru: "Пин 9 не умеет выдавать ШИМ",
+};
+const potGoal: Text = {
+  en: "Turning the knob changes the number in the Serial Monitor from 0 to 1023.",
+  kk: "Тұтқаны бұрағанда Serial Monitor-дағы сан 0-ден 1023-ке дейін өзгереді.",
+  ru: "При повороте ручки число в Serial Monitor меняется от 0 до 1023.",
+};
+const sonarGoal: Text = {
+  en: "The Serial Monitor shows the distance to the nearest obstacle in centimetres.",
+  kk: "Serial Monitor ең жақын кедергіге дейінгі қашықтықты сантиметрмен көрсетеді.",
+  ru: "Serial Monitor показывает расстояние до ближайшего препятствия в сантиметрах.",
+};
+const fadeGoal: Text = {
+  en: "The LED brightens smoothly from off to full, then starts again.",
+  kk: "Жарықдиод сөнген күйден толық жарыққа дейін біртіндеп жанады, сосын қайта басталады.",
+  ru: "Светодиод плавно разгорается от нуля до полной яркости, затем всё повторяется.",
+};
+const batteryGoal: Text = {
+  en: "The board runs from a battery, without the USB cable.",
+  kk: "Плата USB кабелінсіз, батареядан жұмыс істейді.",
+  ru: "Плата работает от батарейки, без USB-кабеля.",
+};
+const sonarZero: Text = {
+  en: "The Serial Monitor prints 0 about once a second, wherever the obstacle is.",
+  kk: "Кедергі қай жерде тұрса да, Serial Monitor шамамен секундына бір рет 0 шығарады.",
+  ru: "Serial Monitor примерно раз в секунду печатает 0, где бы ни стояло препятствие.",
+};
+const driftSymptom: Text = {
+  en: "The numbers in the Serial Monitor drift up and down by themselves and do not follow the knob.",
+  kk: "Serial Monitor-дағы сандар өздігінен жоғары-төмен өзгеріп тұрады және тұтқаға бағынбайды.",
+  ru: "Числа в Serial Monitor сами по себе плавают вверх-вниз и не зависят от ручки.",
+};
+const alwaysOn: Text = {
+  en: "The LED is on all the time, whether the button is pressed or not.",
+  kk: "Батырма басылса да, басылмаса да жарықдиод үнемі жанып тұрады.",
+  ru: "Светодиод горит постоянно, нажата кнопка или нет.",
+};
+const servoStill: Text = {
+  en: "The servo has power but does not move at all. The board does not restart.",
+  kk: "Сервода қорек бар, бірақ ол мүлдем қозғалмайды. Плата қайта іске қосылмайды.",
+  ru: "У серво есть питание, но он совсем не двигается. Плата не перезагружается.",
+};
+const halfBright: Text = {
+  en: "The LED does not blink. It glows steadily at about half brightness.",
+  kk: "Жарықдиод жыпылықтамайды. Ол шамамен жарты жарықпен тұрақты жанып тұрады.",
+  ru: "Светодиод не мигает. Он ровно светится примерно вполсилы.",
+};
+const tooBright: Text = {
+  en: "The LED blinks, but far too brightly, and it gets hot.",
+  kk: "Жарықдиод жыпылықтайды, бірақ тым жарық жанып, қызады.",
+  ru: "Светодиод мигает, но слишком ярко, и нагревается.",
+};
+const batteryLedWiring = [
+  { from: batteryPlus, to: resistor },
+  { from: resistorOut, to: ledLong },
+  { from: ledShort, to: batteryMinus },
+];
+const sonarCode = `const int trigPin = 9;
+const int echoPin = 10;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+}
+
+void loop() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH);
+  long cm = duration / 58;
+  Serial.println(cm);
+  delay(200);
+}`;
+
+// Two LEDs with their own resistors on pins 8 and 9.
+const twoLedCircuit: Diagram = {
+  pins: ["8", "9", "GND"],
+  parts: [
+    { id: "r1", kind: "resistor", label: "220 Ω", x: 250, y: 90 },
+    { id: "d1", kind: "led", x: 370, y: 90 },
+    { id: "r2", kind: "resistor", label: "220 Ω", x: 250, y: 194 },
+    { id: "d2", kind: "led", x: 370, y: 194 },
+  ],
+  wires: [
+    ["uno.8", "r1.a"],
+    ["r1.b", "d1.a"],
+    ["d1.b", "GND"],
+    ["uno.9", "r2.a"],
+    ["r2.b", "d2.a"],
+    ["d2.b", "GND"],
+    ["uno.GND", "GND"],
+  ],
+};
+const twoLedWiring = [
+  {
+    from: pin("8"),
+    to: {
+      en: "Resistor and LED 1, then GND",
+      kk: "Резистор және 1-жарықдиод, сосын GND",
+      ru: "Резистор и светодиод 1, затем GND",
+    },
+  },
+  {
+    from: pin("9"),
+    to: {
+      en: "Resistor and LED 2, then GND",
+      kk: "Резистор және 2-жарықдиод, сосын GND",
+      ru: "Резистор и светодиод 2, затем GND",
+    },
+  },
+];
+
+// Just a button between pin 2 and GND.
+const buttonOnlyCircuit: Diagram = {
+  pins: ["2", "GND"],
+  parts: [{ id: "sw", kind: "button", x: 250, y: 90 }],
+  wires: [
+    ["uno.2", "sw.a"],
+    ["sw.b", "GND"],
+    ["uno.GND", "GND"],
+  ],
+};
+const buttonOnlyWiring = [
+  { from: pin("2"), to: buttonLegA },
+  { from: buttonLegB, to: same("GND") },
+];
+
+// The three breadboard missions share their options: same picture style, different fault.
+const optSameRow: Text = {
+  en: "Both legs of the LED are in the same row of five holes, so the current goes around it",
+  kk: "Жарықдиодтың екі аяғы да бес тесіктен тұратын бір қатарда тұр, сондықтан ток оны айналып өтеді",
+  ru: "Обе ножки светодиода стоят в одном ряду из пяти отверстий, и ток идёт в обход него",
+};
+const optOneOff: Text = {
+  en: "The resistor and the LED are in neighbouring rows and are not connected",
+  kk: "Резистор мен жарықдиод көрші қатарларда тұр және өзара қосылмаған",
+  ru: "Резистор и светодиод стоят в соседних рядах и не соединены",
+};
+const optSplitRail: Text = {
+  en: "The minus rail is split in the middle and its two halves are not joined",
+  kk: "Минус шинасы ортасынан бөлінген, ал оның екі жартысы өзара қосылмаған",
+  ru: "Шина минуса разорвана посередине, и её половины не соединены",
+};
 
 // One LED with a series resistor on a single pin, returning to GND.
 const ledCircuit = (
@@ -2611,7 +2819,3155 @@ void loop() {
       ru: "Логика кода верная, а INPUT_PULLUP не даёт пину висеть в воздухе. Лишние отсчёты появляются из-за дребезга контактов: одно нажатие на самом деле состоит из нескольких быстрых включений и выключений. Обнаружив изменение, не обращай внимания на кнопку примерно 30 мс — например, с помощью короткого delay(30) или сравнивая время через millis(). Это называется подавлением дребезга (debounce).",
     },
   },
+
+  // A second and third mission for topics that had only one.
+  {
+    id: "dim-on-battery",
+    lesson: "electricity",
+    title: { en: "Lit, but barely", kk: "Жанады, бірақ әрең", ru: "Горит, но еле-еле" },
+    primer: {
+      en: "A resistor and an LED in a row share the battery's voltage. The LED takes its 2 V first; what is left pushes current through the resistor. Current = what is left ÷ resistance, so with a small battery the resistor must be small too.",
+      kk: "Тізбектей қосылған резистор мен жарықдиод батарея кернеуін өзара бөліседі. Алдымен жарықдиод өзінің 2 В-ын алады; қалғаны токты резистор арқылы итереді. Ток = қалған кернеу ÷ кедергі, сондықтан батарея кіші болса, резистор да кіші болуы керек.",
+      ru: "Резистор и светодиод, включённые друг за другом, делят напряжение батарейки. Сначала светодиод забирает свои 2 В; то, что осталось, толкает ток через резистор. Ток = остаток ÷ сопротивление, поэтому при маленькой батарейке резистор тоже должен быть маленьким.",
+    },
+    goal: {
+      en: "The LED shines brightly.",
+      kk: "Жарықдиод жарық жанады.",
+      ru: "Светодиод ярко горит.",
+    },
+    diagram: batteryCircuit(
+      "3",
+      [
+        { id: "r1", kind: "resistor", label: "1 kΩ", x: 230, y: 100 },
+        { id: "d1", kind: "led", x: 350, y: 100 },
+      ],
+      [
+        ["r1.a", "5V"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "GND"],
+      ],
+    ),
+    wiring: [
+      {
+        from: batteryPlus,
+        to: { en: "1 kΩ resistor", kk: "1 кОм резистор", ru: "Резистор 1 кОм" },
+      },
+      { from: resistorOut, to: ledLong },
+      { from: ledShort, to: batteryMinus },
+    ],
+    code: "",
+    symptom: {
+      en: "The LED glows so weakly that it is hard to tell whether it is on.",
+      kk: "Жарықдиод соншалықты әлсіз жанады, оның қосулы екенін айыру қиын.",
+      ru: "Светодиод светится так слабо, что трудно понять, включён ли он.",
+    },
+    options: [
+      { en: "The loop is not closed", kk: "Тізбек тұйықталмаған", ru: "Цепь не замкнута" },
+      optLedBackwards,
+      {
+        en: "The resistor is too large for a 3 V battery",
+        kk: "3 В батарея үшін резистор тым үлкен",
+        ru: "Резистор слишком большой для батарейки 3 В",
+      },
+      {
+        en: "A 3 V battery cannot light an LED at all",
+        kk: "3 В батарея жарықдиодты мүлдем жандыра алмайды",
+        ru: "Батарейка 3 В вообще не может зажечь светодиод",
+      },
+    ],
+    answer: 2,
+    faultType: "component",
+    explanation: {
+      en: "The loop is closed and the LED is the right way round, which is why it glows at all. After the LED takes 2 V only 1 V is left, and 1 V ÷ 1000 Ω = 1 mA, far below the 10–15 mA a bright LED needs. Use a resistor of about 68 Ω: 1 V ÷ 68 Ω ≈ 15 mA.",
+      kk: "Тізбек тұйық және жарықдиод дұрыс бағытта тұр, сондықтан ол аз да болса жанады. Жарықдиод 2 В алғаннан кейін тек 1 В қалады, ал 1 В ÷ 1000 Ом = 1 мА — бұл жарық жануға қажет 10–15 мА-ден әлдеқайда аз. Шамамен 68 Ом резистор қой: 1 В ÷ 68 Ом ≈ 15 мА.",
+      ru: "Цепь замкнута, и светодиод стоит правильно, поэтому он вообще светится. После того как светодиод забрал 2 В, остаётся всего 1 В, а 1 В ÷ 1000 Ом = 1 мА — намного меньше 10–15 мА, нужных для яркого свечения. Поставь резистор около 68 Ом: 1 В ÷ 68 Ом ≈ 15 мА.",
+    },
+  },
+  {
+    id: "gnd-to-5v",
+    lesson: "what-is-arduino",
+    title: { en: "Plus on both sides", kk: "Екі жағында да плюс", ru: "Плюс с обеих сторон" },
+    primer: {
+      en: "Current flows only when there is a difference in voltage between the two ends of a part. A pin set HIGH is at 5 V. The 5V pin is also at 5 V. Between two points at the same voltage nothing flows.",
+      kk: "Ток тек бөлшектің екі ұшының арасында кернеу айырмасы болғанда ғана ағады. HIGH күйіндегі пинде 5 В болады. 5V пинінде де 5 В. Кернеуі бірдей екі нүктенің арасында ештеңе ақпайды.",
+      ru: "Ток течёт только тогда, когда между двумя концами детали есть разница напряжений. На пине в состоянии HIGH — 5 В. На пине 5V тоже 5 В. Между двумя точками с одинаковым напряжением ничего не течёт.",
+    },
+    goal: blinkGoal,
+    diagram: {
+      pins: ["5V", "8"],
+      parts: [
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 250, y: 142 },
+        { id: "d1", kind: "led", x: 370, y: 142 },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["uno.8", "r1.a"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "5V"],
+      ],
+    },
+    wiring: [
+      { from: pin("8"), to: resistor },
+      { from: resistorOut, to: ledLong },
+      { from: ledShort, to: same("5V") },
+    ],
+    code: blinkCode,
+    symptom: neverLights,
+    options: [
+      {
+        en: "Pin 8 is never set as OUTPUT",
+        kk: "8-пин OUTPUT режиміне қойылмаған",
+        ru: "Пин 8 не настроен как OUTPUT",
+      },
+      {
+        en: "delay(500) is too short for the eye to notice",
+        kk: "delay(500) тым қысқа, көз байқап үлгермейді",
+        ru: "delay(500) слишком короткая, глаз не успевает заметить",
+      },
+      {
+        en: "The 220 Ω resistor is too large",
+        kk: "220 Ом резистор тым үлкен",
+        ru: "Резистор 220 Ом слишком большой",
+      },
+      {
+        en: "The LED's short leg goes to 5V instead of GND",
+        kk: "Жарықдиодтың қысқа аяғы GND орнына 5V-қа қосылған",
+        ru: "Короткая ножка светодиода подключена к 5V вместо GND",
+      },
+    ],
+    answer: 3,
+    faultType: "wiring",
+    explanation: {
+      en: "The LED's short leg is on 5V. When pin 8 is HIGH, both ends of the circuit are at 5 V and no current flows; when it is LOW, the LED faces the wrong way. Either way it stays dark. Move the short leg to GND.",
+      kk: "Жарықдиодтың қысқа аяғы 5V-қа қосылған. 8-пин HIGH болғанда тізбектің екі ұшында да 5 В тұрады да, ток ақпайды; ал LOW болғанда жарықдиод токқа қарсы бағытта тұрады. Екі жағдайда да ол жанбайды. Қысқа аяқты GND-ға ауыстыр.",
+      ru: "Короткая ножка светодиода стоит на 5V. Когда пин 8 в HIGH, на обоих концах цепи 5 В и ток не течёт; когда в LOW, светодиод оказывается включён навстречу току. В обоих случаях он не горит. Переставь короткую ножку на GND.",
+    },
+  },
+  {
+    id: "button-to-5v",
+    lesson: "buttons",
+    title: {
+      en: "The button nobody hears",
+      kk: "Ешкім естімейтін батырма",
+      ru: "Кнопка, которую никто не слышит",
+    },
+    primer: {
+      en: "INPUT_PULLUP holds the pin at HIGH through a resistor inside the board. A button can only change that by connecting the pin to GND. If the button connects the pin to 5V instead, pressing it changes nothing: HIGH stays HIGH.",
+      kk: "INPUT_PULLUP пинді плата ішіндегі резистор арқылы HIGH күйінде ұстайды. Батырма мұны тек пинді GND-ға қосу арқылы ғана өзгерте алады. Ал батырма пинді 5V-қа қосса, оны басқаннан ештеңе өзгермейді: HIGH сол HIGH күйінде қалады.",
+      ru: "INPUT_PULLUP удерживает пин в HIGH через резистор внутри платы. Кнопка может изменить это, только соединив пин с GND. Если же кнопка соединяет пин с 5V, нажатие ничего не меняет: HIGH остаётся HIGH.",
+    },
+    goal: buttonGoal,
+    diagram: {
+      pins: ["5V", "2", "8", "GND"],
+      parts: [
+        { id: "sw", kind: "button", x: 250, y: 142 },
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 250, y: 194 },
+        { id: "d1", kind: "led", x: 370, y: 194 },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["uno.2", "sw.a"],
+        ["sw.b", "5V"],
+        ["uno.8", "r1.a"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: pin("2"), to: buttonLegA },
+      { from: buttonLegB, to: same("5V") },
+      { from: pin("8"), to: resistor },
+      { from: resistorOut, to: ledLong },
+      { from: ledShort, to: same("GND") },
+    ],
+    code: `void setup() {
+  pinMode(2, INPUT_PULLUP);
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  if (digitalRead(2) == LOW) {
+    digitalWrite(8, HIGH);
+  } else {
+    digitalWrite(8, LOW);
+  }
+}`,
+    symptom: {
+      en: "The LED never lights, however long the button is held.",
+      kk: "Батырманы қанша уақыт басып тұрсаң да, жарықдиод жанбайды.",
+      ru: "Светодиод не загорается, сколько бы ни держали кнопку.",
+    },
+    options: [
+      {
+        en: "The button connects pin 2 to 5V, but with INPUT_PULLUP it must connect it to GND",
+        kk: "Батырма 2-пинді 5V-қа қосады, ал INPUT_PULLUP кезінде ол GND-ға қосуы керек",
+        ru: "Кнопка соединяет пин 2 с 5V, а с INPUT_PULLUP она должна соединять его с GND",
+      },
+      {
+        en: "The code should check for HIGH instead of LOW",
+        kk: "Код LOW орнына HIGH мәнін тексеруі керек",
+        ru: "Код должен проверять HIGH вместо LOW",
+      },
+      { en: "Pin 2 is floating", kk: "2-пин ілініп тұр", ru: "Пин 2 висит в воздухе" },
+      optLedBackwards,
+    ],
+    answer: 0,
+    faultType: "wiring",
+    explanation: {
+      en: "With INPUT_PULLUP pin 2 already rests at HIGH. The button joins it to 5V, which is HIGH as well, so the pin never reads LOW and the LED never turns on. Move the button's second leg from 5V to GND. The pin is not floating: the internal pull-up holds it.",
+      kk: "INPUT_PULLUP кезінде 2-пин онсыз да HIGH күйінде тұрады. Батырма оны 5V-қа қосады, ал ол да HIGH, сондықтан пин ешқашан LOW оқымайды және жарықдиод қосылмайды. Батырманың екінші аяғын 5V-тан GND-ға ауыстыр. Пин ілініп тұрған жоқ: оны ішкі pull-up резисторы ұстап тұр.",
+      ru: "С INPUT_PULLUP пин 2 и так находится в HIGH. Кнопка соединяет его с 5V, а это тоже HIGH, поэтому пин никогда не читает LOW и светодиод не включается. Переставь вторую ножку кнопки с 5V на GND. Пин не висит в воздухе: его держит внутренняя подтяжка.",
+    },
+  },
+  {
+    id: "serial-no-begin",
+    lesson: "serial",
+    title: { en: "The silent monitor", kk: "Үнсіз монитор", ru: "Молчащий монитор" },
+    primer: {
+      en: "The serial port does nothing until it is switched on. Serial.begin(9600) in setup() starts it and sets the speed. Without that line, Serial.println() runs but nothing leaves the board.",
+      kk: "Тізбекті порт қосылмайынша ештеңе істемейді. setup() ішіндегі Serial.begin(9600) оны іске қосып, жылдамдығын белгілейді. Бұл жол болмаса, Serial.println() орындалады, бірақ платадан ештеңе шықпайды.",
+      ru: "Последовательный порт ничего не делает, пока его не включили. Строка Serial.begin(9600) в setup() запускает его и задаёт скорость. Без неё Serial.println() выполняется, но с платы ничего не уходит.",
+    },
+    goal: {
+      en: "Turning the knob changes the number in the Serial Monitor from 0 to 1023.",
+      kk: "Тұтқаны бұрағанда Serial Monitor-дағы сан 0-ден 1023-ке дейін өзгереді.",
+      ru: "При повороте ручки число в Serial Monitor меняется от 0 до 1023.",
+    },
+    diagram: potCircuit,
+    wiring: potWiring,
+    code: `void setup() {
+}
+
+void loop() {
+  int value = analogRead(A0);
+  Serial.println(value);
+  delay(200);
+}`,
+    symptom: {
+      en: "The Serial Monitor stays completely empty: not a single character appears.",
+      kk: "Serial Monitor мүлдем бос тұрады: бірде-бір таңба шықпайды.",
+      ru: "Serial Monitor остаётся совершенно пустым: не появляется ни одного символа.",
+    },
+    options: [
+      {
+        en: "The potentiometer is not connected to 5V",
+        kk: "Потенциометр 5V-қа қосылмаған",
+        ru: "Потенциометр не подключён к 5V",
+      },
+      {
+        en: "The sketch and the Serial Monitor use different baud rates",
+        kk: "Скетч пен Serial Monitor әртүрлі бод жылдамдығын қолданады",
+        ru: "В скетче и в Serial Monitor выбрана разная скорость",
+      },
+      {
+        en: "Serial.begin() is missing from setup()",
+        kk: "setup() ішінде Serial.begin() жоқ",
+        ru: "В setup() нет Serial.begin()",
+      },
+      { en: "delay(200) is too long", kk: "delay(200) тым ұзақ", ru: "delay(200) слишком длинная" },
+    ],
+    answer: 2,
+    faultType: "code",
+    explanation: {
+      en: "setup() is empty, so the serial port was never started and Serial.println() sends nothing. Add Serial.begin(9600); to setup() and set the monitor to the same speed. A wrong speed would show garbage, not an empty window; a missing 5V wire would still print zeros.",
+      kk: "setup() бос, сондықтан тізбекті порт іске қосылмаған және Serial.println() ештеңе жібермейді. setup() ішіне Serial.begin(9600); қосып, мониторда да дәл сол жылдамдықты қой. Жылдамдық қате болса, бос терезе емес, түсініксіз таңбалар шығар еді; ал 5V сымы болмаса, бәрібір нөлдер шығар еді.",
+      ru: "Функция setup() пустая, поэтому последовательный порт не запущен и Serial.println() ничего не отправляет. Добавь Serial.begin(9600); в setup() и поставь в мониторе ту же скорость. При неверной скорости были бы непонятные символы, а не пустое окно; а без провода 5V всё равно печатались бы нули.",
+    },
+  },
+  {
+    id: "print-no-newline",
+    lesson: "serial",
+    title: { en: "One endless number", kk: "Бір шексіз сан", ru: "Одно бесконечное число" },
+    primer: {
+      en: "Serial.print() writes text and stays on the same line. Serial.println() writes text and then starts a new line. To see separate values, each one needs its own line or at least a space after it.",
+      kk: "Serial.print() мәтінді жазып, сол жолда қалады. Serial.println() мәтінді жазып, сосын жаңа жолға көшеді. Мәндерді бөлек көру үшін әрқайсысына жеке жол немесе кем дегенде артынан бос орын керек.",
+      ru: "Serial.print() выводит текст и остаётся на той же строке. Serial.println() выводит текст и переходит на новую строку. Чтобы видеть значения по отдельности, каждому нужна своя строка или хотя бы пробел после него.",
+    },
+    goal: {
+      en: "The Serial Monitor shows the potentiometer reading as a number, five times a second.",
+      kk: "Serial Monitor потенциометр мәнін секундына бес рет сан түрінде көрсетеді.",
+      ru: "Serial Monitor показывает значение потенциометра числом, пять раз в секунду.",
+    },
+    diagram: potCircuit,
+    wiring: potWiring,
+    code: `void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int value = analogRead(A0);
+  Serial.print(value);
+  delay(200);
+}`,
+    symptom: {
+      en: "The Serial Monitor fills with one unbroken row of digits, such as 512512513511512.",
+      kk: "Serial Monitor 512512513511512 сияқты үзіліссіз бір қатар цифрға толады.",
+      ru: "Serial Monitor заполняется одной сплошной строкой цифр вроде 512512513511512.",
+    },
+    options: [
+      { en: "The baud rate is wrong", kk: "Бод жылдамдығы қате", ru: "Неверная скорость в бодах" },
+      {
+        en: "analogRead returns numbers that are too long",
+        kk: "analogRead тым ұзын сандар қайтарады",
+        ru: "analogRead возвращает слишком длинные числа",
+      },
+      {
+        en: "The potentiometer is noisy",
+        kk: "Потенциометр шу береді",
+        ru: "Потенциометр даёт помехи",
+      },
+      {
+        en: "The readings are printed with print(), so they all land on one line",
+        kk: "Мәндер print() арқылы шығарылады, сондықтан бәрі бір жолға түседі",
+        ru: "Показания выводятся через print(), поэтому все попадают в одну строку",
+      },
+    ],
+    answer: 3,
+    faultType: "code",
+    explanation: {
+      en: "The digits are correct readings (512, 512, 513…) written one after another with nothing between them. Change Serial.print(value) to Serial.println(value). A wrong baud rate would give random symbols, not clean digits.",
+      kk: "Бұл цифрлар — араларында ештеңесіз бірінен соң бірі жазылған дұрыс көрсеткіштер (512, 512, 513…). Serial.print(value) дегенді Serial.println(value) деп өзгерт. Бод жылдамдығы қате болса, таза цифрлар емес, кездейсоқ таңбалар шығар еді.",
+      ru: "Эти цифры — правильные показания (512, 512, 513…), записанные подряд без разделителей. Замени Serial.print(value) на Serial.println(value). При неверной скорости были бы случайные символы, а не чистые цифры.",
+    },
+  },
+  {
+    id: "pot-wrong-pin",
+    lesson: "sensors",
+    title: {
+      en: "The reading with a life of its own",
+      kk: "Өз бетімен өзгеретін көрсеткіш",
+      ru: "Показание, которое живёт своей жизнью",
+    },
+    primer: {
+      en: "analogRead() measures whatever pin you name. If the sensor is on a different pin, the code reads a pin with nothing connected, and an unconnected analog pin drifts: it returns values that wander and have nothing to do with the sensor.",
+      kk: "analogRead() сен атаған пинді өлшейді. Датчик басқа пинде тұрса, код ештеңе қосылмаған пинді оқиды, ал қосылмаған аналогтық пин «қалқып» жүреді: датчикке еш қатысы жоқ, өзгеріп тұратын мәндер қайтарады.",
+      ru: "analogRead() измеряет тот пин, который ты назвал. Если датчик стоит на другом пине, код читает пин, к которому ничего не подключено, а неподключённый аналоговый пин «плавает»: он выдаёт блуждающие значения, никак не связанные с датчиком.",
+    },
+    goal: {
+      en: "Turning the knob changes the number in the Serial Monitor from 0 to 1023.",
+      kk: "Тұтқаны бұрағанда Serial Monitor-дағы сан 0-ден 1023-ке дейін өзгереді.",
+      ru: "При повороте ручки число в Serial Monitor меняется от 0 до 1023.",
+    },
+    diagram: {
+      pins: ["5V", "A1", "GND"],
+      parts: [{ id: "pot", kind: "chip", title: potTitle, x: 330, y: 76, left: ["1", "2", "3"] }],
+      wires: [
+        ["uno.5V", "5V"],
+        ["pot.1", "5V"],
+        ["uno.A1", "pot.2"],
+        ["pot.3", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: potLeg1, to: same("5V") },
+      { from: potLeg2, to: same("A1") },
+      { from: potLeg3, to: same("GND") },
+    ],
+    code: potReadCode,
+    symptom: {
+      en: "The numbers in the Serial Monitor drift up and down by themselves and do not follow the knob.",
+      kk: "Serial Monitor-дағы сандар өздігінен жоғары-төмен өзгеріп тұрады және тұтқаға бағынбайды.",
+      ru: "Числа в Serial Monitor сами по себе плавают вверх-вниз и не зависят от ручки.",
+    },
+    options: [
+      { en: "The potentiometer is worn out", kk: "Потенциометр тозған", ru: "Потенциометр износился" },
+      {
+        en: "The potentiometer is on A1, but the code reads A0",
+        kk: "Потенциометр A1-ге қосылған, ал код A0-ді оқиды",
+        ru: "Потенциометр подключён к A1, а код читает A0",
+      },
+      {
+        en: "9600 baud is too slow for analog values",
+        kk: "9600 бод аналогтық мәндер үшін тым баяу",
+        ru: "9600 бод — слишком медленно для аналоговых значений",
+      },
+      {
+        en: "The outer legs are swapped",
+        kk: "Шеткі аяқтардың орны ауысқан",
+        ru: "Крайние ножки перепутаны",
+      },
+    ],
+    answer: 1,
+    faultType: "wiring",
+    explanation: {
+      en: "The wiper goes to A1, while the code calls analogRead(A0). A0 has nothing on it, so it floats and returns wandering values. Change the code to A1 or move the wire to A0. Swapped outer legs would only reverse the direction of the knob.",
+      kk: "Ортаңғы аяқ A1-ге қосылған, ал код analogRead(A0) деп шақырады. A0-ге ештеңе қосылмаған, сондықтан ол «қалқып», өзгеріп тұратын мәндер қайтарады. Кодты A1 деп өзгерт немесе сымды A0-ге ауыстыр. Шеткі аяқтардың орны ауысса, тек тұтқаның бағыты кері болар еді.",
+      ru: "Средняя ножка идёт на A1, а код вызывает analogRead(A0). К A0 ничего не подключено, поэтому он «плавает» и выдаёт блуждающие значения. Поменяй в коде пин на A1 или переставь провод на A0. Перепутанные крайние ножки лишь изменили бы направление ручки.",
+    },
+  },
+  {
+    id: "sonar-no-gnd",
+    lesson: "reading-diagrams",
+    title: {
+      en: "The sensor with one wire missing",
+      kk: "Бір сымы жетпейтін датчик",
+      ru: "Датчик, которому не хватает одного провода",
+    },
+    primer: {
+      en: "A sensor module is a small circuit of its own, and the closed-loop rule applies to it too: power comes in through VCC and must return through GND. On the diagram a contact with nothing connected is drawn as a hollow dot.",
+      kk: "Датчик модулі — өз алдына шағын тізбек, және тұйық тізбек ережесі оған да қатысты: қорек VCC арқылы кіріп, GND арқылы қайтуы керек. Сызбада ештеңе қосылмаған контакт іші бос нүктемен белгіленеді.",
+      ru: "Модуль датчика — это отдельная маленькая схема, и правило замкнутой цепи действует и для него: питание приходит через VCC и должно вернуться через GND. На схеме контакт, к которому ничего не подключено, нарисован пустой точкой.",
+    },
+    goal: {
+      en: "The Serial Monitor shows the distance to the nearest obstacle in centimetres.",
+      kk: "Serial Monitor ең жақын кедергіге дейінгі қашықтықты сантиметрмен көрсетеді.",
+      ru: "Serial Monitor показывает расстояние до ближайшего препятствия в сантиметрах.",
+    },
+    diagram: {
+      pins: ["5V", "9", "10", "GND"],
+      parts: [
+        {
+          id: "hc",
+          kind: "chip",
+          title: same("HC-SR04"),
+          x: 330,
+          y: 102,
+          left: ["VCC", "Trig", "Echo", "GND"],
+        },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["hc.VCC", "5V"],
+        ["uno.9", "hc.Trig"],
+        ["uno.10", "hc.Echo"],
+      ],
+    },
+    wiring: [
+      { from: same("HC-SR04 VCC"), to: same("5V") },
+      { from: same("HC-SR04 Trig"), to: pin("9") },
+      { from: same("HC-SR04 Echo"), to: pin("10") },
+    ],
+    code: `const int trigPin = 9;
+const int echoPin = 10;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+}
+
+void loop() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH);
+  long cm = duration / 58;
+  Serial.println(cm);
+  delay(200);
+}`,
+    symptom: {
+      en: "The Serial Monitor prints 0 about once a second, wherever the obstacle is.",
+      kk: "Кедергі қай жерде тұрса да, Serial Monitor шамамен секундына бір рет 0 шығарады.",
+      ru: "Serial Monitor примерно раз в секунду печатает 0, где бы ни стояло препятствие.",
+    },
+    options: [
+      {
+        en: "Trig and Echo are swapped between the wiring and the code",
+        kk: "Сызба мен кодта Trig пен Echo орындары ауысып кеткен",
+        ru: "Trig и Echo перепутаны между схемой и кодом",
+      },
+      { en: "The division by 58 is wrong", kk: "58-ге бөлу қате", ru: "Деление на 58 неверное" },
+      {
+        en: "The sensor's GND is not connected, so the sensor has no power",
+        kk: "Датчиктің GND контактісі қосылмаған, сондықтан датчикте қорек жоқ",
+        ru: "GND датчика не подключён, поэтому у датчика нет питания",
+      },
+      {
+        en: "delay(200) is too short for sound to return",
+        kk: "delay(200) дыбыс қайтып үлгеруі үшін тым қысқа",
+        ru: "delay(200) слишком короткая, звук не успевает вернуться",
+      },
+    ],
+    answer: 2,
+    faultType: "wiring",
+    explanation: {
+      en: "This time the pin numbers in the code match the wiring. But the sensor's GND contact is a hollow dot: without a return path the sensor is not powered, sends no sound, and pulseIn() times out with 0. Connect the sensor's GND to the Arduino's GND.",
+      kk: "Бұл жолы кодтағы пин нөмірлері сызбаға сәйкес келеді. Бірақ датчиктің GND контактісі — іші бос нүкте: қайтар жол болмағандықтан датчик қоректенбейді, дыбыс жібермейді, ал pulseIn() күту уақыты біткенде 0 қайтарады. Датчиктің GND контактісін Arduino-ның GND пиніне қос.",
+      ru: "В этот раз номера пинов в коде совпадают со схемой. Но контакт GND датчика — пустая точка: без обратного пути датчик не получает питания, не посылает звук, и pulseIn() по тайм-ауту возвращает 0. Соедини GND датчика с GND Arduino.",
+    },
+  },
+  {
+    id: "servo-wrong-pin",
+    lesson: "debugging",
+    title: {
+      en: "The servo that stands still",
+      kk: "Қозғалмай тұрған серво",
+      ru: "Серво, который стоит на месте",
+    },
+    primer: {
+      en: "A servo takes its orders from one signal wire. arm.attach(pin) tells the library which pin that wire is on. If the number does not match the real wire, the orders go out on a pin nobody is listening to.",
+      kk: "Серво бұйрықты бір сигнал сымы арқылы алады. arm.attach(pin) кітапханаға сол сымның қай пинде тұрғанын айтады. Нөмір нақты сымға сәйкес келмесе, бұйрықтар ешкім тыңдамайтын пинге кетеді.",
+      ru: "Серво получает команды по одному сигнальному проводу. arm.attach(pin) сообщает библиотеке, на каком пине этот провод. Если номер не совпадает с настоящим проводом, команды уходят на пин, который никто не слушает.",
+    },
+    goal: sweepGoal,
+    diagram: {
+      pins: ["5V", "6", "GND"],
+      parts: [
+        {
+          id: "servo",
+          kind: "chip",
+          title: smallServoTitle,
+          x: 330,
+          y: 76,
+          left: ["V+", "Signal", "GND"],
+        },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["servo.V+", "5V"],
+        ["uno.6", "servo.Signal"],
+        ["servo.GND", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: servoV, to: same("5V") },
+      { from: servoSignal, to: pin("6") },
+      { from: servoGnd, to: same("GND") },
+    ],
+    code: sweepCode,
+    symptom: {
+      en: "The servo has power but does not move at all. The board does not restart.",
+      kk: "Сервода қорек бар, бірақ ол мүлдем қозғалмайды. Плата қайта іске қосылмайды.",
+      ru: "У серво есть питание, но он совсем не двигается. Плата не перезагружается.",
+    },
+    options: [
+      {
+        en: "The servo takes more current than the 5V pin can give",
+        kk: "Серво 5V пині бере алатыннан көп ток тартады",
+        ru: "Серво потребляет больше тока, чем может дать пин 5V",
+      },
+      {
+        en: "delay(1000) is too short for a servo",
+        kk: "delay(1000) серво үшін тым қысқа",
+        ru: "delay(1000) слишком короткая для серво",
+      },
+      {
+        en: "Pin 6 cannot send a servo signal",
+        kk: "6-пин серво сигналын жібере алмайды",
+        ru: "Пин 6 не может передавать сигнал серво",
+      },
+      {
+        en: "The signal wire is on pin 6, but the code attaches the servo to pin 9",
+        kk: "Сигнал сымы 6-пинде тұр, ал код сервоны 9-пинге тіркейді",
+        ru: "Сигнальный провод стоит на пине 6, а код привязывает серво к пину 9",
+      },
+    ],
+    answer: 3,
+    faultType: "wiring",
+    explanation: {
+      en: "The code sends the signal to pin 9, but the servo's signal wire is on pin 6, so the servo gets power and no orders. Change the code to arm.attach(6) or move the wire to pin 9. A power problem would make the board restart, and any digital pin can drive a servo.",
+      kk: "Код сигналды 9-пинге жібереді, ал сервоның сигнал сымы 6-пинде тұр, сондықтан сервода қорек бар, бірақ бұйрық жоқ. Кодты arm.attach(6) деп өзгерт немесе сымды 9-пинге ауыстыр. Қорек мәселесі болса, плата қайта іске қосылар еді, ал сервоны кез келген сандық пин басқара алады.",
+      ru: "Код отправляет сигнал на пин 9, а сигнальный провод серво стоит на пине 6, поэтому у серво есть питание, но нет команд. Поменяй в коде на arm.attach(6) или переставь провод на пин 9. При проблеме с питанием плата перезагружалась бы, а управлять серво может любой цифровой пин.",
+    },
+  },
+  {
+    id: "battery-on-5v-pin",
+    lesson: "power",
+    title: {
+      en: "Nine volts in the wrong door",
+      kk: "Қате есіктен кірген тоғыз вольт",
+      ru: "Девять вольт не в ту дверь",
+    },
+    primer: {
+      en: "The Uno runs on 5 V. A higher voltage, such as a 9 V battery, must enter through the Vin pin or the round power jack, where a regulator lowers it to 5 V. The 5V pin is after the regulator: whatever is connected there goes straight to the chip.",
+      kk: "Uno 5 В-пен жұмыс істейді. 9 В батарея сияқты жоғарырақ кернеу Vin пині немесе дөңгелек қорек ұясы арқылы кіруі керек — сонда тұрақтандырғыш оны 5 В-қа дейін төмендетеді. 5V пині тұрақтандырғыштан кейін орналасқан: оған қосылған нәрсе тікелей микросхемаға барады.",
+      ru: "Uno работает от 5 В. Более высокое напряжение, например от батарейки 9 В, должно входить через пин Vin или круглый разъём питания — там стабилизатор понижает его до 5 В. Пин 5V находится после стабилизатора: всё, что к нему подключено, идёт прямо на микросхему.",
+    },
+    goal: {
+      en: "The board runs from a battery, without the USB cable.",
+      kk: "Плата USB кабелінсіз, батареядан жұмыс істейді.",
+      ru: "Плата работает от батарейки, без USB-кабеля.",
+    },
+    diagram: {
+      pins: ["Vin", "5V", "GND"],
+      parts: [
+        {
+          id: "bat",
+          kind: "chip",
+          title: { en: "Battery 9 V", kk: "Батарея 9 В", ru: "Батарея 9 В" },
+          x: 330,
+          y: 102,
+          left: ["+", "−"],
+        },
+      ],
+      wires: [
+        ["uno.5V", "bat.+"],
+        ["uno.GND", "bat.−"],
+      ],
+    },
+    wiring: [
+      { from: batteryPlus, to: same("5V") },
+      { from: batteryMinus, to: same("GND") },
+    ],
+    code: "",
+    symptom: {
+      en: "The board switches on for a moment, then the chip becomes too hot to touch and the board stops working.",
+      kk: "Плата бір сәтке қосылады, сосын микросхема ұстауға келмейтіндей қызып, плата жұмысын тоқтатады.",
+      ru: "Плата на мгновение включается, затем микросхема нагревается так, что к ней не прикоснуться, и плата перестаёт работать.",
+    },
+    options: [
+      {
+        en: "A 9 V battery is too weak for the board",
+        kk: "9 В батарея плата үшін тым әлсіз",
+        ru: "Батарейка 9 В слишком слабая для платы",
+      },
+      {
+        en: "9 V went into the 5V pin, past the regulator",
+        kk: "9 В тұрақтандырғышты айналып өтіп, 5V пиніне берілген",
+        ru: "9 В подали на пин 5V в обход стабилизатора",
+      },
+      {
+        en: "The battery is connected backwards",
+        kk: "Батарея теріс қосылған",
+        ru: "Батарейка подключена наоборот",
+      },
+      {
+        en: "The board cannot work without USB",
+        kk: "Плата USB-сіз жұмыс істей алмайды",
+        ru: "Плата не может работать без USB",
+      },
+    ],
+    answer: 1,
+    faultType: "power",
+    explanation: {
+      en: "The battery's plus is on the 5V pin, so the chip gets 9 V instead of 5 V and is damaged. Connect the plus to Vin (or use the power jack): there the regulator turns 9 V into a safe 5 V. The polarity here is right: plus to the board, minus to GND.",
+      kk: "Батареяның плюсі 5V пиніне қосылған, сондықтан микросхемаға 5 В орнына 9 В түсіп, ол зақымданады. Плюсті Vin пиніне қос (немесе қорек ұясын қолдан): сонда тұрақтандырғыш 9 В-ты қауіпсіз 5 В-қа айналдырады. Мұнда полярлық дұрыс: плюс платаға, минус GND-ға қосылған.",
+      ru: "Плюс батарейки стоит на пине 5V, поэтому на микросхему попадает 9 В вместо 5 В, и она выходит из строя. Подключи плюс к Vin (или используй разъём питания): там стабилизатор превращает 9 В в безопасные 5 В. Полярность здесь верная: плюс к плате, минус к GND.",
+    },
+  },
+  {
+    id: "toggle-held",
+    lesson: "buttons",
+    title: {
+      en: "The switch that flips a coin",
+      kk: "Тиын лақтыратын ажыратқыш",
+      ru: "Выключатель, который бросает монетку",
+    },
+    primer: {
+      en: "loop() repeats thousands of times a second. A command placed inside \"if the button is pressed\" therefore runs thousands of times during one press. To act once per press, the code must notice the moment the button goes from released to pressed.",
+      kk: "loop() секундына мыңдаған рет қайталанады. Сондықтан «батырма басылған болса» шартының ішіндегі команда бір басу кезінде мыңдаған рет орындалады. Әр басуға бір рет әрекет ету үшін код батырманың жіберулі күйден басылған күйге өткен сәтін байқауы керек.",
+      ru: "loop() повторяется тысячи раз в секунду. Поэтому команда внутри условия «если кнопка нажата» за одно нажатие выполняется тысячи раз. Чтобы действовать один раз на нажатие, код должен заметить момент, когда кнопка переходит из отпущенного состояния в нажатое.",
+    },
+    goal: {
+      en: "Each press of the button switches the LED: on, off, on, off.",
+      kk: "Батырманың әр басылуы жарықдиодты ауыстырады: қосулы, өшірулі, қосулы, өшірулі.",
+      ru: "Каждое нажатие кнопки переключает светодиод: включён, выключен, включён, выключен.",
+    },
+    diagram: pullupButtonCircuit,
+    wiring: pullupButtonWiring,
+    code: `bool on = false;
+
+void setup() {
+  pinMode(2, INPUT_PULLUP);
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  if (digitalRead(2) == LOW) {
+    on = !on;
+    digitalWrite(8, on);
+  }
+}`,
+    symptom: {
+      en: "While the button is held the LED glows at half brightness. After release it ends up on or off at random.",
+      kk: "Батырма басулы тұрғанда жарықдиод жарты жарықпен жанады. Жібергеннен кейін ол кездейсоқ түрде қосулы немесе өшірулі күйде қалады.",
+      ru: "Пока кнопка нажата, светодиод светится вполсилы. После отпускания он случайным образом остаётся включённым или выключенным.",
+    },
+    options: [
+      {
+        en: "The button needs an external resistor",
+        kk: "Батырмаға сыртқы резистор керек",
+        ru: "Кнопке нужен внешний резистор",
+      },
+      {
+        en: "A bool cannot be passed to digitalWrite",
+        kk: "digitalWrite-қа bool беруге болмайды",
+        ru: "В digitalWrite нельзя передавать bool",
+      },
+      {
+        en: "The LED flips on every pass of loop() while the button is held",
+        kk: "Батырма басулы тұрғанда жарықдиод loop()-тың әр айналымында ауысады",
+        ru: "Пока кнопка нажата, светодиод переключается на каждом проходе loop()",
+      },
+      {
+        en: "The internal pull-up is too weak",
+        kk: "Ішкі pull-up резисторы тым әлсіз",
+        ru: "Внутренняя подтяжка слишком слабая",
+      },
+    ],
+    answer: 2,
+    faultType: "code",
+    explanation: {
+      en: "While the button is down, the condition is true on every pass, so the LED is flipped thousands of times a second: it looks half-bright, and where it stops is luck. Remember the previous state of the button and flip the LED only when it changes from released to pressed.",
+      kk: "Батырма басулы кезде шарт әр айналымда ақиқат болады, сондықтан жарықдиод секундына мыңдаған рет ауысады: ол жарты жарықпен жанып тұрғандай көрінеді, ал қай күйде тоқтайтыны — кездейсоқтық. Батырманың алдыңғы күйін есте сақтап, жарықдиодты тек батырма жіберулі күйден басылған күйге өткенде ғана ауыстыр.",
+      ru: "Пока кнопка нажата, условие истинно на каждом проходе, поэтому светодиод переключается тысячи раз в секунду: он выглядит полуярким, а в каком состоянии остановится — дело случая. Запоминай предыдущее состояние кнопки и переключай светодиод только при переходе из отпущенного в нажатое.",
+    },
+  },
+  {
+    id: "millis-no-update",
+    lesson: "timing",
+    title: {
+      en: "The timer that never resets",
+      kk: "Ешқашан қайта қосылмайтын таймер",
+      ru: "Таймер, который не сбрасывается",
+    },
+    primer: {
+      en: "Timing with millis() has two halves. First check whether enough time has passed since the remembered moment. Then, when you act, remember the new moment. Without the second half, the check stays true forever after the first time.",
+      kk: "millis() арқылы уақыт өлшеу екі бөліктен тұрады. Алдымен есте сақталған сәттен бері жеткілікті уақыт өткенін тексер. Сосын әрекет еткен кезде жаңа сәтті есте сақта. Екінші бөлік болмаса, тексеру бірінші реттен кейін мәңгі ақиқат болып қалады.",
+      ru: "Отсчёт времени через millis() состоит из двух частей. Сначала проверь, прошло ли достаточно времени с запомненного момента. Затем, выполняя действие, запомни новый момент. Без второй части проверка после первого раза остаётся истинной навсегда.",
+    },
+    goal: {
+      en: "The LED switches on and off every second, without using delay().",
+      kk: "Жарықдиод delay() қолданбай, әр секунд сайын жанып-сөнеді.",
+      ru: "Светодиод каждую секунду переключается, без использования delay().",
+    },
+    diagram: ledCircuit("8"),
+    wiring: ledWiring("8"),
+    code: `unsigned long lastChange = 0;
+bool on = false;
+
+void setup() {
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  if (millis() - lastChange >= 1000) {
+    on = !on;
+    digitalWrite(8, on);
+  }
+}`,
+    symptom: {
+      en: "The LED stays off for the first second after a reset, then glows steadily at about half brightness and never blinks.",
+      kk: "Қайта іске қосқаннан кейінгі алғашқы секундта жарықдиод сөніп тұрады, сосын шамамен жарты жарықпен тұрақты жанып, мүлдем жыпылықтамайды.",
+      ru: "Первую секунду после перезапуска светодиод не горит, затем ровно светится примерно вполсилы и совсем не мигает.",
+    },
+    options: [
+      {
+        en: "unsigned long is the wrong type for time",
+        kk: "unsigned long уақыт үшін жарамсыз түр",
+        ru: "unsigned long — неподходящий тип для времени",
+      },
+      {
+        en: "1000 is too small a number for millis()",
+        kk: "1000 — millis() үшін тым кіші сан",
+        ru: "1000 — слишком маленькое число для millis()",
+      },
+      {
+        en: "pinMode must be inside loop()",
+        kk: "pinMode loop() ішінде тұруы керек",
+        ru: "pinMode должен стоять внутри loop()",
+      },
+      {
+        en: "lastChange is never updated, so after one second the condition is always true",
+        kk: "lastChange ешқашан жаңартылмайды, сондықтан бір секундтан кейін шарт әрдайым ақиқат",
+        ru: "lastChange не обновляется, поэтому через секунду условие истинно всегда",
+      },
+    ],
+    answer: 3,
+    faultType: "code",
+    explanation: {
+      en: "The check is right, but nothing ever writes a new value into lastChange. Once a second has passed, millis() - lastChange stays above 1000, the LED is flipped on every pass and looks half-bright. Add lastChange = millis(); inside the if.",
+      kk: "Тексеру дұрыс, бірақ lastChange-ке ешқашан жаңа мән жазылмайды. Бір секунд өткен соң millis() - lastChange 1000-нан жоғары күйінде қалады, жарықдиод әр айналымда ауысады да, жарты жарықпен жанып тұрғандай көрінеді. if ішіне lastChange = millis(); қос.",
+      ru: "Проверка написана верно, но в lastChange никогда не записывается новое значение. Когда секунда прошла, millis() - lastChange остаётся больше 1000, светодиод переключается на каждом проходе и выглядит полуярким. Добавь lastChange = millis(); внутрь if.",
+    },
+  },
+  {
+    id: "semicolon-after-if",
+    lesson: "code-traps",
+    title: {
+      en: "The condition that decides nothing",
+      kk: "Ештеңе шешпейтін шарт",
+      ru: "Условие, которое ничего не решает",
+    },
+    primer: {
+      en: "An if controls the single command or the block in braces that comes right after it. A semicolon is a complete, empty command. So if (…); means \"if true, do nothing\", and the block after it runs every time, as if there were no if at all.",
+      kk: "if өзінен кейін бірден тұрған жалғыз команданы немесе жүйелі жақшадағы блокты басқарады. Нүктелі үтір — толыққанды, бос команда. Сондықтан if (…); дегеніміз «ақиқат болса, ештеңе істеме» дегенді білдіреді, ал одан кейінгі блок if мүлдем жоқ сияқты әр жолы орындалады.",
+      ru: "if управляет одной командой или блоком в фигурных скобках, который стоит сразу за ним. Точка с запятой — это полноценная пустая команда. Поэтому if (…); означает «если истина, ничего не делай», а блок после него выполняется каждый раз, как будто if нет вообще.",
+    },
+    goal: {
+      en: "The LED lights only while the button is held.",
+      kk: "Жарықдиод тек батырма басулы тұрғанда ғана жанады.",
+      ru: "Светодиод горит, только пока кнопка нажата.",
+    },
+    diagram: pullupButtonCircuit,
+    wiring: pullupButtonWiring,
+    code: `void setup() {
+  pinMode(2, INPUT_PULLUP);
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(8, LOW);
+  if (digitalRead(2) == LOW);
+  {
+    digitalWrite(8, HIGH);
+  }
+}`,
+    symptom: {
+      en: "The LED is on all the time, whether the button is pressed or not.",
+      kk: "Батырма басылса да, басылмаса да жарықдиод үнемі жанып тұрады.",
+      ru: "Светодиод горит постоянно, нажата кнопка или нет.",
+    },
+    options: [
+      {
+        en: "With INPUT_PULLUP a pressed button reads HIGH",
+        kk: "INPUT_PULLUP кезінде басылған батырма HIGH болып оқылады",
+        ru: "С INPUT_PULLUP нажатая кнопка читается как HIGH",
+      },
+      {
+        en: "The semicolon after the if ends it, so the block below always runs",
+        kk: "if-тен кейінгі нүктелі үтір оны аяқтайды, сондықтан төмендегі блок әрдайым орындалады",
+        ru: "Точка с запятой после if завершает его, и блок ниже выполняется всегда",
+      },
+      optLedBackwards,
+      { en: "The button is shorted", kk: "Батырма тұйықталған", ru: "Кнопка закорочена" },
+    ],
+    answer: 1,
+    faultType: "code",
+    explanation: {
+      en: "There is a semicolon straight after the condition. It is an empty command, and it is the only thing the if controls. The braces below are just an ordinary block, so digitalWrite(8, HIGH) runs on every pass. Delete that semicolon. The compiler accepts this code without complaint, which is what makes it a trap.",
+      kk: "Шарттан кейін бірден нүктелі үтір тұр. Бұл — бос команда, және if тек соны ғана басқарады. Төмендегі жүйелі жақшалар — жай кәдімгі блок, сондықтан digitalWrite(8, HIGH) әр айналымда орындалады. Сол нүктелі үтірді өшір. Компилятор бұл кодты еш ескертусіз қабылдайды — тұзақ болатыны да содан.",
+      ru: "Сразу после условия стоит точка с запятой. Это пустая команда, и только ею if и управляет. Фигурные скобки ниже — обычный блок, поэтому digitalWrite(8, HIGH) выполняется на каждом проходе. Удали эту точку с запятой. Компилятор принимает такой код без замечаний — поэтому это и ловушка.",
+    },
+  },
+  {
+    id: "servo-kills-pwm",
+    lesson: "special-pins",
+    title: {
+      en: "The LED that forgot how to fade",
+      kk: "Біртіндеп жануды ұмытқан жарықдиод",
+      ru: "Светодиод, который разучился плавно гореть",
+    },
+    primer: {
+      en: "PWM on pins 9 and 10 is produced by one internal timer of the Uno. The Servo library takes that same timer for itself. As soon as a sketch uses a servo, analogWrite() stops working on pins 9 and 10, even if the servo is on another pin.",
+      kk: "9 және 10-пиндердегі ШИМ-ді Uno-ның бір ішкі таймері жасайды. Servo кітапханасы дәл сол таймерді өзіне алады. Скетч сервоны қолдана бастаған бойда, серво басқа пинде тұрса да, 9 және 10-пиндерде analogWrite() жұмыс істемей қалады.",
+      ru: "ШИМ на пинах 9 и 10 создаёт один внутренний таймер Uno. Библиотека Servo забирает этот же таймер себе. Как только скетч использует серво, analogWrite() перестаёт работать на пинах 9 и 10, даже если серво стоит на другом пине.",
+    },
+    goal: {
+      en: "The servo holds its position while the LED fades smoothly up.",
+      kk: "Серво өз күйін ұстап тұрады, ал жарықдиод біртіндеп жанады.",
+      ru: "Серво удерживает положение, а светодиод плавно разгорается.",
+    },
+    diagram: {
+      pins: ["5V", "6", "10", "GND"],
+      parts: [
+        {
+          id: "servo",
+          kind: "chip",
+          title: smallServoTitle,
+          x: 520,
+          y: 50,
+          left: ["V+", "Signal", "GND"],
+        },
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 250, y: 194 },
+        { id: "d1", kind: "led", x: 370, y: 194 },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["servo.V+", "5V"],
+        ["uno.6", "servo.Signal"],
+        ["servo.GND", "GND"],
+        ["uno.10", "r1.a"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: servoV, to: same("5V") },
+      { from: servoSignal, to: pin("6") },
+      { from: servoGnd, to: same("GND") },
+      { from: pin("10"), to: resistor },
+      { from: resistorOut, to: ledLong },
+      { from: ledShort, to: same("GND") },
+    ],
+    code: `#include <Servo.h>
+
+Servo arm;
+
+void setup() {
+  arm.attach(6);
+  arm.write(90);
+  pinMode(10, OUTPUT);
+}
+
+void loop() {
+  for (int b = 0; b <= 255; b++) {
+    analogWrite(10, b);
+    delay(10);
+  }
+}`,
+    symptom: {
+      en: "The servo works. The LED on pin 10 does not fade: it only switches abruptly or flickers. Without the servo lines the same LED fades perfectly.",
+      kk: "Серво жұмыс істейді. Ал 10-пиндегі жарықдиод біртіндеп жанбайды: ол тек кенет ауысады немесе жыпылықтайды. Сервоға қатысты жолдарды алып тастаса, сол жарықдиод мінсіз біртіндеп жанады.",
+      ru: "Серво работает. Светодиод на пине 10 не разгорается плавно: он только резко переключается или мерцает. Если убрать строки про серво, тот же светодиод разгорается идеально.",
+    },
+    options: [
+      {
+        en: "The Servo library uses the timer that drives PWM on pins 9 and 10",
+        kk: "Servo кітапханасы 9 және 10-пиндердегі ШИМ-ді басқаратын таймерді қолданады",
+        ru: "Библиотека Servo занимает таймер, который управляет ШИМ на пинах 9 и 10",
+      },
+      { en: "Pin 10 has no PWM", kk: "10-пинде ШИМ жоқ", ru: "У пина 10 нет ШИМ" },
+      {
+        en: "The servo takes too much current, so the LED gets none",
+        kk: "Серво тым көп ток тартады, сондықтан жарықдиодқа ток жетпейді",
+        ru: "Серво берёт слишком большой ток, и светодиоду не хватает",
+      },
+      {
+        en: "delay(10) is too short for a smooth fade",
+        kk: "delay(10) біртіндеп жану үшін тым қысқа",
+        ru: "delay(10) слишком короткая для плавного перехода",
+      },
+    ],
+    answer: 0,
+    faultType: "limits",
+    explanation: {
+      en: "Pin 10 normally has PWM, and it works until the Servo library is used. The library takes over the timer behind pins 9 and 10, so analogWrite() there stops giving a smooth signal. Move the LED to another ~ pin, such as 3, 5 or 11, and change the number in the code.",
+      kk: "Әдетте 10-пинде ШИМ бар, және ол Servo кітапханасы қолданылғанға дейін жұмыс істейді. Кітапхана 9 және 10-пиндердің артындағы таймерді өзіне алады, сондықтан ол пиндерде analogWrite() біркелкі сигнал бермей қалады. Жарықдиодты ~ белгісі бар басқа пинге, мысалы 3, 5 немесе 11-ге ауыстырып, кодтағы нөмірді өзгерт.",
+      ru: "Обычно у пина 10 есть ШИМ, и он работает, пока не используется библиотека Servo. Библиотека занимает таймер, стоящий за пинами 9 и 10, поэтому analogWrite() на них перестаёт давать плавный сигнал. Переставь светодиод на другой пин со значком ~, например 3, 5 или 11, и поменяй номер в коде.",
+    },
+  },
+
+  // Breadboard missions: the plan and the code are right, the build is not.
+  {
+    id: "bb-same-row",
+    lesson: "breadboard",
+    title: { en: "Two legs, one row", kk: "Екі аяқ, бір қатар", ru: "Две ножки в одном ряду" },
+    primer: {
+      en: "On a breadboard every numbered row of five holes is one piece of metal: everything pushed into that row is joined. A part only does its job when its two legs sit in two different rows. With both legs in one row, the current simply passes through the metal strip and ignores the part.",
+      kk: "Макет тақтасында бес тесіктен тұратын әр нөмірленген қатар — бір металл жолақ: сол қатарға кіргізілген нәрсенің бәрі өзара қосылады. Бөлшек екі аяғы екі түрлі қатарда тұрғанда ғана жұмыс істейді. Екі аяғы да бір қатарда болса, ток жай металл жолақ арқылы өтіп, бөлшекті елемейді.",
+      ru: "На макетной плате каждый пронумерованный ряд из пяти отверстий — это одна металлическая полоска: всё, что вставлено в этот ряд, соединено. Деталь работает, только когда её ножки стоят в двух разных рядах. Если обе ножки в одном ряду, ток просто идёт по металлической полоске и не замечает деталь.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("8"),
+    board: {
+      rows: 14,
+      items: [
+        { kind: "lead", at: "3a", label: "Pin 8" },
+        { kind: "resistor", from: "3c", to: "7c", label: "220 Ω" },
+        { kind: "led", long: "7d", short: "7e" },
+        { kind: "lead", at: "7a", label: "GND" },
+      ],
+    },
+    wiring: ledWiring("8"),
+    code: blinkCode,
+    symptom: neverLights,
+    options: [optOneOff, optSameRow, optLedBackwards, optSplitRail],
+    answer: 1,
+    faultType: "wiring",
+    explanation: {
+      en: "The plan is right, and so is the code. On the board, though, both legs of the LED are in row 7, together with the resistor and the GND wire. Row 7 is one strip of metal, so the current goes from the resistor straight to GND. Move the LED's short leg to row 9 and the GND wire with it.",
+      kk: "Сызба да, код та дұрыс. Бірақ тақтада жарықдиодтың екі аяғы да резистормен және GND сымымен бірге 7-қатарда тұр. 7-қатар — бір металл жолақ, сондықтан ток резистордан тікелей GND-ға кетеді. Жарықдиодтың қысқа аяғын 9-қатарға ауыстырып, GND сымын да сонда қой.",
+      ru: "И схема, и код верны. Но на плате обе ножки светодиода стоят в ряду 7, вместе с резистором и проводом GND. Ряд 7 — одна металлическая полоска, поэтому ток идёт от резистора прямо в GND. Переставь короткую ножку светодиода в ряд 9 и туда же перенеси провод GND.",
+    },
+  },
+  {
+    id: "bb-one-off",
+    lesson: "breadboard",
+    title: { en: "One row to the side", kk: "Бір қатар шетте", ru: "На один ряд в стороне" },
+    primer: {
+      en: "Two parts are connected on a breadboard only if a leg of each sits in the same row of five holes. One row to the side looks almost the same, but those rows are separate strips of metal with nothing between them.",
+      kk: "Макет тақтасында екі бөлшек әрқайсысының бір аяғы бес тесіктен тұратын бір қатарда тұрғанда ғана қосылады. Бір қатар шетте тұру сырттай бірдей көрінеді, бірақ ол қатарлар — араларында ештеңесі жоқ бөлек металл жолақтар.",
+      ru: "Две детали на макетной плате соединены, только если по одной ножке каждой стоит в одном ряду из пяти отверстий. Сдвиг на один ряд выглядит почти так же, но эти ряды — отдельные металлические полоски, между которыми ничего нет.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("8"),
+    board: {
+      rows: 14,
+      items: [
+        { kind: "lead", at: "3a", label: "Pin 8" },
+        { kind: "resistor", from: "3c", to: "7c", label: "220 Ω" },
+        { kind: "led", long: "8e", short: "10e" },
+        { kind: "lead", at: "10a", label: "GND" },
+      ],
+    },
+    wiring: ledWiring("8"),
+    code: blinkCode,
+    symptom: neverLights,
+    options: [optSplitRail, optLedBackwards, optSameRow, optOneOff],
+    answer: 3,
+    faultType: "wiring",
+    explanation: {
+      en: "The resistor ends in row 7, and the LED's long leg is in row 8. Nothing joins the two rows, so the loop is open at that point. Move the LED's long leg into row 7.",
+      kk: "Резистор 7-қатарда аяқталады, ал жарықдиодтың ұзын аяғы 8-қатарда тұр. Бұл екі қатарды ештеңе қоспайды, сондықтан тізбек сол жерде үзілген. Жарықдиодтың ұзын аяғын 7-қатарға ауыстыр.",
+      ru: "Резистор заканчивается в ряду 7, а длинная ножка светодиода стоит в ряду 8. Эти два ряда ничем не соединены, поэтому цепь разорвана в этом месте. Переставь длинную ножку светодиода в ряд 7.",
+    },
+  },
+  {
+    id: "bb-split-rail",
+    lesson: "breadboard",
+    title: { en: "The rail with a gap", kk: "Үзігі бар шина", ru: "Шина с разрывом" },
+    primer: {
+      en: "The long rails along the edge carry plus and minus to the whole board. On many breadboards each rail is cut in the middle: the left half and the right half are two separate strips. The printed line along the rail shows it; where the line breaks, so does the metal.",
+      kk: "Шеттегі ұзын шиналар плюс пен минусты бүкіл тақтаға жеткізеді. Көптеген макет тақталарында әр шина ортасынан үзілген: сол жақ жартысы мен оң жақ жартысы — екі бөлек жолақ. Мұны шина бойындағы басылған сызық көрсетеді: сызық үзілген жерде металл да үзіледі.",
+      ru: "Длинные шины вдоль края разводят плюс и минус по всей плате. На многих макетных платах каждая шина разрезана посередине: левая и правая половины — две отдельные полоски. Это показывает линия, напечатанная вдоль шины: где линия прерывается, там прерывается и металл.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("8"),
+    board: {
+      rows: 14,
+      railSplitAfter: 7,
+      items: [
+        { kind: "lead", at: "-2", label: "GND" },
+        { kind: "lead", at: "9a", label: "Pin 8" },
+        { kind: "resistor", from: "9c", to: "12c", label: "220 Ω" },
+        { kind: "led", long: "12e", short: "14e" },
+        { kind: "wire", from: "14a", to: "-14" },
+      ],
+    },
+    wiring: ledWiring("8"),
+    code: blinkCode,
+    symptom: neverLights,
+    options: [optSplitRail, optSameRow, optOneOff, optLedBackwards],
+    answer: 0,
+    faultType: "wiring",
+    explanation: {
+      en: "The GND wire from the Arduino goes into the left half of the minus rail, and the LED's return wire into the right half. The rail is split between rows 7 and 8, so the two halves are not connected and the loop is open. Put a short wire across the gap, or move the GND wire to the right half.",
+      kk: "Arduino-дан келетін GND сымы минус шинасының сол жақ жартысына, ал жарықдиодтың қайтар сымы оң жақ жартысына қосылған. Шина 7 мен 8-қатардың арасында үзілген, сондықтан екі жартысы өзара қосылмаған және тізбек ашық. Үзіктің үстінен қысқа сым сал немесе GND сымын оң жақ жартысына ауыстыр.",
+      ru: "Провод GND от Arduino вставлен в левую половину шины минуса, а обратный провод светодиода — в правую. Шина разорвана между рядами 7 и 8, поэтому половины не соединены и цепь разомкнута. Поставь короткую перемычку через разрыв или перенеси провод GND в правую половину.",
+    },
+  },
+
+  // More practice in reading a diagram and in checking wiring against code.
+  {
+    id: "both-ends-gnd",
+    lesson: "reading-diagrams",
+    title: {
+      en: "Both ends in the same place",
+      kk: "Екі ұшы да бір жерде",
+      ru: "Оба конца в одном месте",
+    },
+    primer: {
+      en: "To read a diagram, follow the circuit from one end to the other. A working LED circuit starts at a pin and ends at GND. If both ends land on the same line, there is no voltage across the parts, whatever the code does.",
+      kk: "Сызбаны оқу үшін тізбекті бір ұшынан екінші ұшына дейін қадағала. Жұмыс істейтін жарықдиод тізбегі пиннен басталып, GND-да аяқталады. Екі ұшы да бір сызыққа түссе, код не істесе де, бөлшектерде кернеу болмайды.",
+      ru: "Чтобы прочитать схему, проследи цепь от одного конца до другого. Рабочая цепь со светодиодом начинается на пине и заканчивается на GND. Если оба конца попадают на одну и ту же линию, на деталях нет напряжения, что бы ни делал код.",
+    },
+    goal: blinkGoal,
+    diagram: {
+      pins: ["8", "GND"],
+      parts: [
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 250, y: 90 },
+        { id: "d1", kind: "led", x: 370, y: 90 },
+      ],
+      wires: [
+        ["r1.a", "GND"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: same("GND"), to: resistor },
+      { from: resistorOut, to: ledLong },
+      { from: ledShort, to: same("GND") },
+    ],
+    code: blinkCode,
+    symptom: neverLights,
+    options: [
+      {
+        en: "Pin 8 is never set as OUTPUT",
+        kk: "8-пин OUTPUT режиміне қойылмаған",
+        ru: "Пин 8 не настроен как OUTPUT",
+      },
+      optLedBackwards,
+      {
+        en: "Both ends of the circuit are on GND, and nothing is connected to pin 8",
+        kk: "Тізбектің екі ұшы да GND-да тұр, ал 8-пинге ештеңе қосылмаған",
+        ru: "Оба конца цепи стоят на GND, а к пину 8 ничего не подключено",
+      },
+      {
+        en: "The 220 Ω resistor is too large",
+        kk: "220 Ом резистор тым үлкен",
+        ru: "Резистор 220 Ом слишком большой",
+      },
+    ],
+    answer: 2,
+    faultType: "wiring",
+    explanation: {
+      en: "Follow the wires: the resistor starts on the GND line and the LED ends on the GND line, while pin 8 is a hollow dot. Both ends are at 0 V, so no current can flow. Move the resistor's first end from GND to pin 8.",
+      kk: "Сымдарды қадағала: резистор GND сызығынан басталады, жарықдиод та GND сызығында аяқталады, ал 8-пин — іші бос нүкте. Екі ұшында да 0 В, сондықтан ток аға алмайды. Резистордың бірінші ұшын GND-дан 8-пинге ауыстыр.",
+      ru: "Проследи провода: резистор начинается на линии GND, светодиод заканчивается тоже на линии GND, а пин 8 — пустая точка. На обоих концах 0 В, поэтому ток течь не может. Переставь первый конец резистора с GND на пин 8.",
+    },
+  },
+  {
+    id: "pot-both-5v",
+    lesson: "reading-diagrams",
+    title: {
+      en: "The knob stuck at the top",
+      kk: "Ең жоғарғы мәнде тұрып қалған тұтқа",
+      ru: "Ручка, застрявшая на максимуме",
+    },
+    primer: {
+      en: "A potentiometer divides the voltage between its two outer legs. That only works when the outer legs are at different voltages: one at 5V, the other at GND. On a diagram, check where each of the three legs ends up.",
+      kk: "Потенциометр екі шеткі аяғының арасындағы кернеуді бөледі. Бұл тек шеткі аяқтарда әртүрлі кернеу болғанда ғана жұмыс істейді: бірінде 5V, екіншісінде GND. Сызбада үш аяқтың әрқайсысы қайда баратынын тексер.",
+      ru: "Потенциометр делит напряжение между двумя крайними ножками. Это работает, только когда на крайних ножках разное напряжение: на одной 5V, на другой GND. На схеме проверь, куда приходит каждая из трёх ножек.",
+    },
+    goal: {
+      en: "Turning the knob changes the number in the Serial Monitor from 0 to 1023.",
+      kk: "Тұтқаны бұрағанда Serial Monitor-дағы сан 0-ден 1023-ке дейін өзгереді.",
+      ru: "При повороте ручки число в Serial Monitor меняется от 0 до 1023.",
+    },
+    diagram: {
+      pins: ["5V", "A0", "GND"],
+      parts: [{ id: "pot", kind: "chip", title: potTitle, x: 330, y: 76, left: ["1", "2", "3"] }],
+      wires: [
+        ["uno.5V", "5V"],
+        ["pot.1", "5V"],
+        ["uno.A0", "pot.2"],
+        ["pot.3", "5V"],
+      ],
+    },
+    wiring: [
+      { from: potLeg1, to: same("5V") },
+      { from: potLeg2, to: same("A0") },
+      { from: potLeg3, to: same("5V") },
+    ],
+    code: potReadCode,
+    symptom: {
+      en: "The Serial Monitor prints 1023 (sometimes 1022) no matter how the knob is turned.",
+      kk: "Тұтқаны қалай бұрасаң да, Serial Monitor 1023 (кейде 1022) шығарады.",
+      ru: "Serial Monitor печатает 1023 (иногда 1022), как бы ни крутили ручку.",
+    },
+    options: [
+      {
+        en: "The potentiometer is burned out",
+        kk: "Потенциометр күйіп кеткен",
+        ru: "Потенциометр сгорел",
+      },
+      {
+        en: "Both outer legs are on 5V and nothing goes to GND",
+        kk: "Шеткі екі аяғы да 5V-қа қосылған, ал GND-ға ештеңе бармайды",
+        ru: "Обе крайние ножки подключены к 5V, а к GND не идёт ничего",
+      },
+      {
+        en: "The code should use digitalRead",
+        kk: "Кодта digitalRead қолдану керек",
+        ru: "В коде нужно использовать digitalRead",
+      },
+      {
+        en: "The sketch and the Serial Monitor use different baud rates",
+        kk: "Скетч пен Serial Monitor әртүрлі бод жылдамдығын қолданады",
+        ru: "В скетче и в Serial Monitor выбрана разная скорость",
+      },
+    ],
+    answer: 1,
+    faultType: "wiring",
+    explanation: {
+      en: "Legs 1 and 3 both end on the red 5V line, and the GND pin is a hollow dot. With 5 V at both ends there is nothing to divide: the middle leg is at 5 V in every position. Move leg 3 to GND.",
+      kk: "1-аяқ та, 3-аяқ та қызыл 5V сызығында аяқталады, ал GND пині — іші бос нүкте. Екі ұшында да 5 В болғандықтан бөлетін ештеңе жоқ: ортаңғы аяқта кез келген күйде 5 В тұрады. 3-аяқты GND-ға ауыстыр.",
+      ru: "Ножки 1 и 3 обе приходят на красную линию 5V, а пин GND — пустая точка. При 5 В на обоих концах делить нечего: на средней ножке в любом положении 5 В. Переставь ножку 3 на GND.",
+    },
+  },
+  {
+    id: "button-wrong-pin",
+    lesson: "debugging",
+    title: {
+      en: "The button on the wrong line",
+      kk: "Қате желідегі батырма",
+      ru: "Кнопка не на той линии",
+    },
+    primer: {
+      en: "When a project does nothing, compare the wiring with the code number by number. Each pin number in the code must be a pin that the diagram shows something connected to. An input with INPUT_PULLUP and nothing attached quietly reads HIGH forever.",
+      kk: "Жоба ештеңе істемесе, сызбаны кодпен нөмірлеп салыстыр. Кодтағы әр пин нөмірі сызбада бір нәрсе қосылған пинге сәйкес келуі керек. INPUT_PULLUP режиміндегі, ештеңе қосылмаған кіріс үндемей мәңгі HIGH оқи береді.",
+      ru: "Когда проект ничего не делает, сверь схему с кодом номер за номером. Каждый номер пина в коде должен быть пином, к которому на схеме что-то подключено. Вход с INPUT_PULLUP, к которому ничего не подключено, молча читает HIGH бесконечно.",
+    },
+    goal: buttonGoal,
+    diagram: pullupButtonCircuit,
+    wiring: pullupButtonWiring,
+    code: `void setup() {
+  pinMode(3, INPUT_PULLUP);
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  if (digitalRead(3) == LOW) {
+    digitalWrite(8, HIGH);
+  } else {
+    digitalWrite(8, LOW);
+  }
+}`,
+    symptom: {
+      en: "The LED never lights, however long the button is held.",
+      kk: "Батырманы қанша уақыт басып тұрсаң да, жарықдиод жанбайды.",
+      ru: "Светодиод не загорается, сколько бы ни держали кнопку.",
+    },
+    options: [
+      {
+        en: "The button must be wired to 5V, not GND",
+        kk: "Батырма GND-ға емес, 5V-қа қосылуы керек",
+        ru: "Кнопку нужно подключить к 5V, а не к GND",
+      },
+      {
+        en: "The code should check for HIGH instead of LOW",
+        kk: "Код LOW орнына HIGH мәнін тексеруі керек",
+        ru: "Код должен проверять HIGH вместо LOW",
+      },
+      {
+        en: "The code reads pin 3, but the button is wired to pin 2",
+        kk: "Код 3-пинді оқиды, ал батырма 2-пинге қосылған",
+        ru: "Код читает пин 3, а кнопка подключена к пину 2",
+      },
+      optLedBackwards,
+    ],
+    answer: 2,
+    faultType: "wiring",
+    explanation: {
+      en: "The button is on pin 2, but the code sets up and reads pin 3. Pin 3 has nothing on it; its internal pull-up keeps it at HIGH, so the condition is never true. Change both 3s in the code to 2, or move the wire to pin 3.",
+      kk: "Батырма 2-пинде тұр, ал код 3-пинді баптап, соны оқиды. 3-пинге ештеңе қосылмаған; ішкі pull-up резисторы оны HIGH күйінде ұстайды, сондықтан шарт ешқашан орындалмайды. Кодтағы екі 3-ті де 2-ге өзгерт немесе сымды 3-пинге ауыстыр.",
+      ru: "Кнопка стоит на пине 2, а код настраивает и читает пин 3. К пину 3 ничего не подключено; внутренняя подтяжка держит его в HIGH, поэтому условие никогда не выполняется. Замени в коде обе тройки на 2 или переставь провод на пин 3.",
+    },
+  },
+
+  // Fourth and fifth missions for every topic.
+  {
+    id: "gap-in-the-middle",
+    lesson: "circuit",
+    title: { en: "The missing link", kk: "Жетіспейтін буын", ru: "Недостающее звено" },
+    primer: {
+      en: "A loop is only as good as its weakest joint. Every part must be joined to the next one: a single missing wire anywhere stops the current everywhere.",
+      kk: "Тізбек ең әлсіз буынынан мықты бола алмайды. Әр бөлшек келесісіне қосылуы керек: кез келген жердегі бір ғана жетіспейтін сым бүкіл тізбектегі токты тоқтатады.",
+      ru: "Цепь не сильнее своего самого слабого соединения. Каждая деталь должна быть соединена со следующей: один недостающий провод в любом месте останавливает ток везде.",
+    },
+    goal: lightGoal,
+    diagram: batteryCircuit(
+      "4.5",
+      [
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 230, y: 100 },
+        { id: "d1", kind: "led", x: 350, y: 100 },
+      ],
+      [
+        ["r1.a", "5V"],
+        ["d1.b", "GND"],
+      ],
+    ),
+    wiring: [
+      { from: batteryPlus, to: resistor },
+      { from: ledShort, to: batteryMinus },
+    ],
+    code: "",
+    symptom: {
+      en: "The LED does not light up.",
+      kk: "Жарықдиод жанбайды.",
+      ru: "Светодиод не горит.",
+    },
+    options: [
+      optLedBackwards,
+      {
+        en: "The resistor and the LED are not connected to each other",
+        kk: "Резистор мен жарықдиод бір-біріне қосылмаған",
+        ru: "Резистор и светодиод не соединены друг с другом",
+      },
+      {
+        en: "The battery is too strong for one LED",
+        kk: "Батарея бір жарықдиод үшін тым күшті",
+        ru: "Батарейка слишком мощная для одного светодиода",
+      },
+      {
+        en: "A plain wire shorts the battery",
+        kk: "Жай сым батареяны тұйықтап тұр",
+        ru: "Обычный провод закорачивает батарейку",
+      },
+    ],
+    answer: 1,
+    faultType: "wiring",
+    explanation: {
+      en: "Both ends of the loop reach the battery, but in the middle the resistor's second end and the LED's long leg are hollow dots: nothing joins them. Add a wire between the resistor and the LED.",
+      kk: "Тізбектің екі ұшы да батареяға жетеді, бірақ ортасында резистордың екінші ұшы мен жарықдиодтың ұзын аяғы — іші бос нүктелер: оларды ештеңе қоспайды. Резистор мен жарықдиодтың арасына сым қос.",
+      ru: "Оба конца цепи доходят до батарейки, но в середине второй конец резистора и длинная ножка светодиода — пустые точки: их ничто не соединяет. Добавь провод между резистором и светодиодом.",
+    },
+  },
+  {
+    id: "led-backwards-battery",
+    lesson: "led-resistor",
+    title: { en: "Facing the wrong way", kk: "Теріс қарап тұр", ru: "Не той стороной" },
+    primer: {
+      en: "An LED is a one-way street for current. The long leg must point toward the battery's plus and the short leg toward the minus. Turned around, it blocks the current completely and stays dark, without any damage.",
+      kk: "Жарықдиод — ток үшін бір бағытты жол. Ұзын аяғы батареяның плюсіне, қысқа аяғы минусына қарауы керек. Теріс қойылса, ол токты толық бөгеп, жанбай тұрады, бірақ зақымданбайды.",
+      ru: "Светодиод для тока — улица с односторонним движением. Длинная ножка должна смотреть на плюс батарейки, короткая — на минус. Если его перевернуть, он полностью перекрывает ток и не горит, но и не портится.",
+    },
+    goal: lightGoal,
+    diagram: batteryCircuit(
+      "4.5",
+      [
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 230, y: 100 },
+        { id: "d1", kind: "led", x: 350, y: 100, flip: true },
+      ],
+      [
+        ["r1.a", "5V"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "GND"],
+      ],
+    ),
+    wiring: [
+      { from: batteryPlus, to: resistor },
+      { from: resistorOut, to: ledShort },
+      { from: ledLong, to: batteryMinus },
+    ],
+    code: "",
+    symptom: {
+      en: "The loop is closed, but the LED does not light up.",
+      kk: "Тізбек тұйық, бірақ жарықдиод жанбайды.",
+      ru: "Цепь замкнута, но светодиод не горит.",
+    },
+    options: [
+      oLoopOpen,
+      oRes220Large,
+      optLedBackwards,
+      {
+        en: "4.5 V is too little for an LED",
+        kk: "4,5 В жарықдиод үшін тым аз",
+        ru: "4,5 В слишком мало для светодиода",
+      },
+    ],
+    answer: 2,
+    faultType: "component",
+    explanation: {
+      en: "Follow the labels: the resistor leads to the LED's short leg, and the long leg goes to the minus. The LED is reversed and blocks the current. Turn it around.",
+      kk: "Жазуларға қара: резистор жарықдиодтың қысқа аяғына барады, ал ұзын аяғы минусқа қосылған. Жарықдиод теріс тұр және токты бөгейді. Оны аударып қой.",
+      ru: "Посмотри на подписи: резистор идёт к короткой ножке светодиода, а длинная подключена к минусу. Светодиод перевёрнут и не пропускает ток. Разверни его.",
+    },
+  },
+  {
+    id: "blue-on-3v",
+    lesson: "electricity",
+    title: {
+      en: "Red works, blue does not",
+      kk: "Қызыл жанады, көк жанбайды",
+      ru: "Красный горит, синий нет",
+    },
+    primer: {
+      en: "Different LEDs need a different push to open. Red opens at about 2 V, blue and white at about 3 V. The battery must give more than that, because some voltage also has to be left over to drive the current through the resistor.",
+      kk: "Әртүрлі жарықдиодтардың «ашылуы» үшін әртүрлі кернеу керек. Қызыл шамамен 2 В-та, көк пен ақ шамамен 3 В-та ашылады. Батарея одан көбірек беруі керек, өйткені токты резистор арқылы өткізуге де біраз кернеу қалуы тиіс.",
+      ru: "Разным светодиодам нужно разное напряжение, чтобы «открыться». Красный открывается примерно при 2 В, синий и белый — примерно при 3 В. Батарейка должна давать больше, потому что часть напряжения должна остаться на то, чтобы прогнать ток через резистор.",
+    },
+    goal: {
+      en: "The blue LED shines brightly.",
+      kk: "Көк жарықдиод жарық жанады.",
+      ru: "Синий светодиод ярко горит.",
+    },
+    diagram: batteryCircuit(
+      "3",
+      [
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 230, y: 100 },
+        { id: "d1", kind: "led", x: 350, y: 100, tint: "blue" },
+      ],
+      [
+        ["r1.a", "5V"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "GND"],
+      ],
+    ),
+    wiring: batteryLedWiring,
+    code: "",
+    symptom: {
+      en: "A red LED lights fine in this circuit. The blue one put in its place stays almost dark.",
+      kk: "Бұл тізбекте қызыл жарықдиод жақсы жанады. Оның орнына қойылған көк жарықдиод жанбайды десе де болады.",
+      ru: "Красный светодиод в этой цепи горит нормально. Синий, поставленный на его место, почти не светится.",
+    },
+    options: [
+      {
+        en: "The blue LED is plugged in backwards",
+        kk: "Көк жарықдиод теріс қосылған",
+        ru: "Синий светодиод вставлен наоборот",
+      },
+      {
+        en: "A blue LED needs about 3 V, so a 3 V battery has nothing left to drive the current",
+        kk: "Көк жарықдиодқа шамамен 3 В керек, сондықтан 3 В батареяда токты өткізетін кернеу қалмайды",
+        ru: "Синему светодиоду нужно около 3 В, и у батарейки на 3 В не остаётся напряжения, чтобы прогнать ток",
+      },
+      { en: "The resistor is too small", kk: "Резистор тым кіші", ru: "Резистор слишком маленький" },
+      oLoopOpen,
+    ],
+    answer: 1,
+    faultType: "power",
+    explanation: {
+      en: "The red LED needs 2 V and leaves 1 V for the resistor, so current flows. The blue one needs the whole 3 V, nothing is left, and almost no current flows. Use three AA batteries (4.5 V).",
+      kk: "Қызыл жарықдиодқа 2 В керек, резисторға 1 В қалады, сондықтан ток өтеді. Көкке бүкіл 3 В керек, ештеңе қалмайды, ток өтпейді десе де болады. Үш AA батарея (4,5 В) қолдан.",
+      ru: "Красному светодиоду нужно 2 В, и 1 В остаётся резистору, поэтому ток идёт. Синему нужны все 3 В, ничего не остаётся, и ток почти не течёт. Возьми три батарейки AA (4,5 В).",
+    },
+  },
+  {
+    id: "too-bright-9v",
+    lesson: "electricity",
+    title: { en: "Too much of a good thing", kk: "Артық жарық", ru: "Слишком ярко" },
+    primer: {
+      en: "A resistor chosen for one voltage is wrong for another. With more volts pushing, the same resistor lets more current through. A small LED is happy with about 15 mA and wears out quickly above 20 mA.",
+      kk: "Бір кернеуге таңдалған резистор басқа кернеуге жарамайды. Кернеу көбейсе, дәл сол резистор көбірек ток өткізеді. Кішкентай жарықдиодқа шамамен 15 мА жеткілікті, ал 20 мА-ден асса, ол тез тозады.",
+      ru: "Резистор, подобранный под одно напряжение, не подходит для другого. Если вольт больше, тот же резистор пропускает больший ток. Маленькому светодиоду хватает примерно 15 мА, а выше 20 мА он быстро изнашивается.",
+    },
+    goal: {
+      en: "The LED shines at normal brightness for a long time.",
+      kk: "Жарықдиод қалыпты жарықпен ұзақ уақыт жанады.",
+      ru: "Светодиод долго горит с нормальной яркостью.",
+    },
+    diagram: batteryCircuit(
+      "9",
+      [
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 230, y: 100 },
+        { id: "d1", kind: "led", x: 350, y: 100 },
+      ],
+      [
+        ["r1.a", "5V"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "GND"],
+      ],
+    ),
+    wiring: batteryLedWiring,
+    code: "",
+    symptom: {
+      en: "The LED is much brighter than usual and gets warm. After some days it has become noticeably dimmer.",
+      kk: "Жарықдиод әдеттегіден әлдеқайда жарық жанады және жылиды. Бірнеше күннен кейін ол айтарлықтай күңгірттенген.",
+      ru: "Светодиод горит намного ярче обычного и нагревается. Через несколько дней он стал заметно тусклее.",
+    },
+    options: [
+      {
+        en: "220 Ω is too small for 9 V: the current is about twice what the LED should get",
+        kk: "220 Ом 9 В үшін тым аз: ток жарықдиодқа қажеттіден шамамен екі есе көп",
+        ru: "220 Ом слишком мало для 9 В: ток примерно вдвое больше, чем положено светодиоду",
+      },
+      optLedBackwards,
+      { en: "The battery is running flat", kk: "Батарея таусылып барады", ru: "Батарейка садится" },
+      { en: "The wires are too thin", kk: "Сымдар тым жіңішке", ru: "Провода слишком тонкие" },
+    ],
+    answer: 0,
+    faultType: "component",
+    explanation: {
+      en: "(9 − 2) V ÷ 220 Ω ≈ 32 mA, about twice the safe current, so the LED overheats and ages fast. For 9 V use about 470 Ω: 7 V ÷ 470 Ω ≈ 15 mA.",
+      kk: "(9 − 2) В ÷ 220 Ом ≈ 32 мА — қауіпсіз токтан шамамен екі есе көп, сондықтан жарықдиод қызып, тез тозады. 9 В үшін шамамен 470 Ом ал: 7 В ÷ 470 Ом ≈ 15 мА.",
+      ru: "(9 − 2) В ÷ 220 Ом ≈ 32 мА — примерно вдвое больше безопасного тока, поэтому светодиод перегревается и быстро стареет. Для 9 В возьми около 470 Ом: 7 В ÷ 470 Ом ≈ 15 мА.",
+    },
+  },
+  {
+    id: "led-on-5v",
+    lesson: "what-is-arduino",
+    title: {
+      en: "The LED that never blinks",
+      kk: "Ешқашан жыпылықтамайтын жарықдиод",
+      ru: "Светодиод, который не мигает",
+    },
+    primer: {
+      en: "The 5V pin is always on: the sketch cannot switch it. Only the numbered pins can be turned on and off by code. Something that should blink must be connected to a numbered pin, not to 5V.",
+      kk: "5V пині әрдайым қосулы: скетч оны өшіре алмайды. Кодпен тек нөмірленген пиндерді ғана қосып-өшіруге болады. Жыпылықтауы керек нәрсе 5V-қа емес, нөмірленген пинге қосылуы тиіс.",
+      ru: "Пин 5V включён всегда: скетч не может им управлять. Включать и выключать из кода можно только пронумерованные пины. То, что должно мигать, подключают к пронумерованному пину, а не к 5V.",
+    },
+    goal: blinkGoal,
+    diagram: {
+      pins: ["5V", "8", "GND"],
+      parts: [
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 250, y: 142 },
+        { id: "d1", kind: "led", x: 370, y: 142 },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["r1.a", "5V"],
+        ["r1.b", "d1.a"],
+        ["d1.b", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: same("5V"), to: resistor },
+      { from: resistorOut, to: ledLong },
+      { from: ledShort, to: same("GND") },
+    ],
+    code: blinkCode,
+    symptom: {
+      en: "The LED is on all the time and never blinks.",
+      kk: "Жарықдиод үнемі жанып тұрады және мүлдем жыпылықтамайды.",
+      ru: "Светодиод горит постоянно и совсем не мигает.",
+    },
+    options: [
+      {
+        en: "The LED is wired to 5V instead of pin 8",
+        kk: "Жарықдиод 8-пиннің орнына 5V-қа қосылған",
+        ru: "Светодиод подключён к 5V вместо пина 8",
+      },
+      {
+        en: "delay(500) is too short for the eye to notice",
+        kk: "delay(500) тым қысқа, көз байқап үлгермейді",
+        ru: "delay(500) слишком короткая, глаз не успевает заметить",
+      },
+      oNotOutput,
+      {
+        en: "The LED is too bright to see it blink",
+        kk: "Жарықдиод тым жарық, сондықтан жыпылықтауы көрінбейді",
+        ru: "Светодиод слишком яркий, чтобы заметить мигание",
+      },
+    ],
+    answer: 0,
+    faultType: "wiring",
+    explanation: {
+      en: "The resistor starts on the 5V line, which is always on, and pin 8 is a hollow dot. The code blinks pin 8 correctly, but nothing is connected to it. Move the resistor's first end from 5V to pin 8.",
+      kk: "Резистор әрдайым қосулы тұратын 5V сызығынан басталады, ал 8-пин — іші бос нүкте. Код 8-пинді дұрыс жыпылықтатады, бірақ оған ештеңе қосылмаған. Резистордың бірінші ұшын 5V-тан 8-пинге ауыстыр.",
+      ru: "Резистор начинается на линии 5V, которая включена всегда, а пин 8 — пустая точка. Код правильно мигает пином 8, но к нему ничего не подключено. Переставь первый конец резистора с 5V на пин 8.",
+    },
+  },
+  {
+    id: "second-led-forgotten",
+    lesson: "what-is-arduino",
+    title: { en: "One of two", kk: "Екеудің біреуі", ru: "Один из двух" },
+    primer: {
+      en: "The board does only what the sketch says, pin by pin. Wiring a second LED is half the job: the code must also set its pin as an output and switch it. A pin the code never mentions does nothing.",
+      kk: "Плата тек скетчте жазылғанды ғана, әр пин бойынша жеке орындайды. Екінші жарықдиодты қосу — жұмыстың жартысы ғана: код оның пинін де шығыс етіп баптап, қосып-өшіруі керек. Кодта аталмаған пин ештеңе істемейді.",
+      ru: "Плата делает только то, что написано в скетче, для каждого пина отдельно. Подключить второй светодиод — половина дела: код должен ещё настроить его пин как выход и переключать его. Пин, который в коде не упомянут, ничего не делает.",
+    },
+    goal: {
+      en: "Both LEDs blink together.",
+      kk: "Екі жарықдиод бірге жыпылықтайды.",
+      ru: "Оба светодиода мигают вместе.",
+    },
+    diagram: twoLedCircuit,
+    wiring: twoLedWiring,
+    code: blinkCode,
+    symptom: {
+      en: "The LED on pin 8 blinks. The LED on pin 9 stays dark.",
+      kk: "8-пиндегі жарықдиод жыпылықтайды. 9-пиндегі жарықдиод жанбайды.",
+      ru: "Светодиод на пине 8 мигает. Светодиод на пине 9 не горит.",
+    },
+    options: [
+      {
+        en: "The second LED is plugged in backwards",
+        kk: "Екінші жарықдиод теріс қосылған",
+        ru: "Второй светодиод вставлен наоборот",
+      },
+      {
+        en: "Two LEDs cannot share one GND",
+        kk: "Екі жарықдиод бір GND-ны бөлісе алмайды",
+        ru: "Два светодиода не могут делить один GND",
+      },
+      {
+        en: "The code never sets up or switches pin 9",
+        kk: "Код 9-пинді баптамайды да, қосып-өшірмейді де",
+        ru: "Код не настраивает и не переключает пин 9",
+      },
+      {
+        en: "The board cannot power two LEDs",
+        kk: "Плата екі жарықдиодты қоректендіре алмайды",
+        ru: "Плата не может питать два светодиода",
+      },
+    ],
+    answer: 2,
+    faultType: "code",
+    explanation: {
+      en: "Both LEDs are wired the same way and both are the right way round. The difference is in the code: every line mentions pin 8 and none mentions pin 9. Add pinMode(9, OUTPUT) and a digitalWrite(9, …) next to each one for pin 8.",
+      kk: "Екі жарықдиод та бірдей және дұрыс бағытта қосылған. Айырмашылық кодта: әр жолда 8-пин аталады, ал 9-пин еш жерде аталмайды. pinMode(9, OUTPUT) қосып, 8-пинге арналған әр digitalWrite-тың жанына digitalWrite(9, …) жаз.",
+      ru: "Оба светодиода подключены одинаково и стоят правильно. Разница в коде: в каждой строке упоминается пин 8 и ни в одной — пин 9. Добавь pinMode(9, OUTPUT) и рядом с каждым digitalWrite для пина 8 такой же для пина 9.",
+    },
+  },
+  {
+    id: "missing-brace",
+    lesson: "sketch-structure",
+    title: {
+      en: "The block that never ends",
+      kk: "Аяқталмайтын блок",
+      ru: "Блок, который не заканчивается",
+    },
+    primer: {
+      en: "Curly braces mark where a block starts and ends. setup() and loop() each need an opening { and a closing }. If one closing brace is missing, the computer thinks the first block is still going on and complains about whatever comes next.",
+      kk: "Жүйелі жақшалар блоктың қай жерде басталып, қай жерде аяқталатынын белгілейді. setup() пен loop()-тың әрқайсысына ашылатын { және жабылатын } керек. Жабылатын бір жақша жетіспесе, компьютер бірінші блок әлі жалғасып жатыр деп ойлап, одан кейін келген нәрсеге шағымданады.",
+      ru: "Фигурные скобки отмечают, где блок начинается и где заканчивается. И setup(), и loop() нужны открывающая { и закрывающая }. Если одной закрывающей скобки не хватает, компьютер считает, что первый блок ещё продолжается, и ругается на то, что идёт дальше.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("8"),
+    wiring: ledWiring("8"),
+    code: `void setup() {
+  pinMode(8, OUTPUT);
+
+void loop() {
+  digitalWrite(8, HIGH);
+  delay(500);
+  digitalWrite(8, LOW);
+  delay(500);
+}`,
+    symptom: {
+      en: "The sketch does not upload. The editor shows: error: a function-definition is not allowed here before '{' token.",
+      kk: "Скетч жүктелмейді. Редактор мынаны көрсетеді: error: a function-definition is not allowed here before '{' token.",
+      ru: "Скетч не загружается. Редактор показывает: error: a function-definition is not allowed here before '{' token.",
+    },
+    options: [
+      {
+        en: "loop() must be written before setup()",
+        kk: "loop() setup()-тан бұрын жазылуы керек",
+        ru: "loop() нужно писать перед setup()",
+      },
+      {
+        en: "The closing brace of setup() is missing",
+        kk: "setup()-тың жабылатын жақшасы жоқ",
+        ru: "У setup() нет закрывающей скобки",
+      },
+      {
+        en: "A semicolon is missing after pinMode",
+        kk: "pinMode-тан кейін нүктелі үтір жоқ",
+        ru: "После pinMode нет точки с запятой",
+      },
+      {
+        en: "The board is not connected to the computer",
+        kk: "Плата компьютерге қосылмаған",
+        ru: "Плата не подключена к компьютеру",
+      },
+    ],
+    answer: 1,
+    faultType: "code",
+    explanation: {
+      en: "setup() opens with { but is never closed, so the computer sees void loop() as something written inside setup() and refuses it. Add a } on its own line after pinMode(8, OUTPUT);. Counting braces in pairs finds this kind of error fast.",
+      kk: "setup() { белгісімен ашылады, бірақ жабылмайды, сондықтан компьютер void loop() жолын setup() ішінде жазылған нәрсе деп қабылдап, оны қабылдамайды. pinMode(8, OUTPUT); жолынан кейін жеке жолға } қос. Жақшаларды жұптап санау мұндай қатені тез табады.",
+      ru: "setup() открывается скобкой {, но не закрывается, поэтому компьютер считает void loop() чем-то написанным внутри setup() и отказывается это принимать. Добавь } отдельной строкой после pinMode(8, OUTPUT);. Такую ошибку быстро находит подсчёт скобок по парам.",
+    },
+  },
+  {
+    id: "wrong-capital",
+    lesson: "sketch-structure",
+    title: {
+      en: "A small letter, a big problem",
+      kk: "Кіші әріп, үлкен мәселе",
+      ru: "Маленькая буква, большая проблема",
+    },
+    primer: {
+      en: "In Arduino code, capital and small letters are different letters. digitalWrite, pinMode, HIGH and OUTPUT must be spelled exactly like that. A name with the wrong letter case is, to the computer, a name it has never heard of.",
+      kk: "Arduino кодында бас әріп пен кіші әріп — әртүрлі әріптер. digitalWrite, pinMode, HIGH және OUTPUT дәл осылай жазылуы керек. Әріп регистрі қате жазылған атау компьютер үшін — бұрын-соңды естімеген атау.",
+      ru: "В коде Arduino заглавные и строчные буквы — разные буквы. digitalWrite, pinMode, HIGH и OUTPUT нужно писать в точности так. Имя с неверным регистром для компьютера — имя, которого он никогда не слышал.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("8"),
+    wiring: ledWiring("8"),
+    code: `void setup() {
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  digitalwrite(8, HIGH);
+  delay(500);
+  digitalWrite(8, LOW);
+  delay(500);
+}`,
+    symptom: {
+      en: "The sketch does not upload. The editor shows: error: 'digitalwrite' was not declared in this scope.",
+      kk: "Скетч жүктелмейді. Редактор мынаны көрсетеді: error: 'digitalwrite' was not declared in this scope.",
+      ru: "Скетч не загружается. Редактор показывает: error: 'digitalwrite' was not declared in this scope.",
+    },
+    options: [
+      {
+        en: "The Arduino has no command for switching a pin on",
+        kk: "Arduino-да пинді қосатын команда жоқ",
+        ru: "У Arduino нет команды для включения пина",
+      },
+      {
+        en: "HIGH must be written in small letters",
+        kk: "HIGH кіші әріптермен жазылуы керек",
+        ru: "HIGH нужно писать строчными буквами",
+      },
+      { en: "A library is missing", kk: "Кітапхана жетіспейді", ru: "Не хватает библиотеки" },
+      {
+        en: "The first digitalWrite is spelled with a small w",
+        kk: "Бірінші digitalWrite кіші w әрпімен жазылған",
+        ru: "Первый digitalWrite написан с маленькой w",
+      },
+    ],
+    answer: 3,
+    faultType: "code",
+    explanation: {
+      en: "Line 6 says digitalwrite with a small w. The command is digitalWrite, with a capital W, exactly as on line 8. Fix that one letter. \"Was not declared\" almost always means a misspelled name.",
+      kk: "6-жолда digitalwrite кіші w әрпімен жазылған. Команда — digitalWrite, бас W әрпімен, дәл 8-жолдағыдай. Сол бір әріпті түзет. «Was not declared» деген хабар әрдайым дерлік атаудың қате жазылғанын білдіреді.",
+      ru: "В строке 6 написано digitalwrite с маленькой w. Команда называется digitalWrite, с заглавной W, как в строке 8. Исправь эту одну букву. Сообщение «was not declared» почти всегда означает опечатку в имени.",
+    },
+  },
+  {
+    id: "delay-units",
+    lesson: "timing",
+    title: {
+      en: "A second that lasts a millisecond",
+      kk: "Миллисекундқа созылған секунд",
+      ru: "Секунда длиной в миллисекунду",
+    },
+    primer: {
+      en: "delay() counts in milliseconds, thousandths of a second. delay(1000) waits one second; delay(1) waits so briefly that no eye can follow it. An LED switched that fast looks dim instead of blinking.",
+      kk: "delay() миллисекундпен, яғни секундтың мыңнан бір бөлігімен санайды. delay(1000) бір секунд күтеді; delay(1) соншалықты қысқа күтеді, көз ілесе алмайды. Осыншалық жылдам қосылып-өшетін жарықдиод жыпылықтамай, күңгірт жанып тұрғандай көрінеді.",
+      ru: "delay() считает в миллисекундах, тысячных долях секунды. delay(1000) ждёт одну секунду; delay(1) ждёт так недолго, что глаз не успевает. Светодиод, который переключается так быстро, выглядит тусклым, а не мигающим.",
+    },
+    goal: {
+      en: "The LED is on for one second, then off for one second.",
+      kk: "Жарықдиод бір секунд жанады, сосын бір секунд сөнеді.",
+      ru: "Светодиод секунду горит, затем секунду не горит.",
+    },
+    diagram: ledCircuit("8"),
+    wiring: ledWiring("8"),
+    code: `void setup() {
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(8, HIGH);
+  delay(1);
+  digitalWrite(8, LOW);
+  delay(1);
+}`,
+    symptom: halfBright,
+    options: [
+      oNotOutput,
+      oRes220Large,
+      {
+        en: "delay(1) waits one millisecond, not one second",
+        kk: "delay(1) бір секунд емес, бір миллисекунд күтеді",
+        ru: "delay(1) ждёт одну миллисекунду, а не секунду",
+      },
+      optLedBackwards,
+    ],
+    answer: 2,
+    faultType: "code",
+    explanation: {
+      en: "delay(1) is a thousandth of a second, so the LED is switched five hundred times a second and the eye sees an average: half brightness. Write delay(1000) for one second.",
+      kk: "delay(1) — секундтың мыңнан бір бөлігі, сондықтан жарықдиод секундына бес жүз рет қосылып-өшеді де, көз орташа мәнді көреді: жарты жарық. Бір секунд үшін delay(1000) деп жаз.",
+      ru: "delay(1) — это тысячная доля секунды, поэтому светодиод переключается пятьсот раз в секунду, и глаз видит среднее: половину яркости. Для одной секунды напиши delay(1000).",
+    },
+  },
+  {
+    id: "pinmode-other-pin",
+    lesson: "digital-pins",
+    title: {
+      en: "The right command for the wrong pin",
+      kk: "Қате пинге берілген дұрыс команда",
+      ru: "Правильная команда не тому пину",
+    },
+    primer: {
+      en: "pinMode() and digitalWrite() must name the same pin. If the code makes one pin an output and then writes to another, the second pin is still an input, and writing HIGH to an input only switches on a weak internal resistor.",
+      kk: "pinMode() мен digitalWrite() бір пинді атауы керек. Код бір пинді шығыс етіп, сосын басқасына жазса, екінші пин әлі де кіріс күйінде қалады, ал кіріске HIGH жазу тек әлсіз ішкі резисторды қосады.",
+      ru: "pinMode() и digitalWrite() должны называть один и тот же пин. Если код делает выходом один пин, а потом пишет в другой, второй остаётся входом, а запись HIGH во вход включает лишь слабый внутренний резистор.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("9"),
+    wiring: ledWiring("9"),
+    code: `void setup() {
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(9, HIGH);
+  delay(500);
+  digitalWrite(9, LOW);
+  delay(500);
+}`,
+    symptom: dimSymptom,
+    options: [
+      {
+        en: "pinMode sets pin 8, but the LED and digitalWrite use pin 9",
+        kk: "pinMode 8-пинді баптайды, ал жарықдиод пен digitalWrite 9-пинді қолданады",
+        ru: "pinMode настраивает пин 8, а светодиод и digitalWrite используют пин 9",
+      },
+      oRes220Large,
+      optLedBackwards,
+      { en: "Pin 9 can only do PWM", kk: "9-пин тек ШИМ жасай алады", ru: "Пин 9 умеет только ШИМ" },
+    ],
+    answer: 0,
+    faultType: "code",
+    explanation: {
+      en: "The LED is on pin 9 and the code writes to pin 9, but pinMode names pin 8. Pin 9 stays an input, so HIGH gives only a trickle of current and the LED barely glows. Change pinMode(8, OUTPUT) to pinMode(9, OUTPUT).",
+      kk: "Жарықдиод 9-пинде тұр және код 9-пинге жазады, бірақ pinMode 8-пинді атайды. 9-пин кіріс күйінде қалады, сондықтан HIGH өте аз ток береді де, жарықдиод әрең жанады. pinMode(8, OUTPUT) дегенді pinMode(9, OUTPUT) деп өзгерт.",
+      ru: "Светодиод стоит на пине 9, и код пишет в пин 9, но pinMode называет пин 8. Пин 9 остаётся входом, поэтому HIGH даёт лишь крошечный ток и светодиод еле светится. Замени pinMode(8, OUTPUT) на pinMode(9, OUTPUT).",
+    },
+  },
+  {
+    id: "resistor-too-small",
+    lesson: "led-resistor",
+    title: { en: "Ten ohms of protection", kk: "Он омдық қорғаныс", ru: "Защита в десять ом" },
+    primer: {
+      en: "The resistor decides how much current the LED gets. Too large, and the LED is dim. Too small, and the current is far above what the LED and the pin can stand: an Arduino pin should give about 20 mA and must never be asked for more than 40 mA.",
+      kk: "Жарықдиод қанша ток алатынын резистор шешеді. Тым үлкен болса, жарықдиод күңгірт жанады. Тым кіші болса, ток жарықдиод пен пин шыдай алатын мөлшерден әлдеқайда асып кетеді: Arduino пині шамамен 20 мА беруі керек және одан ешқашан 40 мА-ден артық сұрауға болмайды.",
+      ru: "Резистор решает, какой ток получит светодиод. Слишком большой — светодиод тусклый. Слишком маленький — ток намного выше того, что выдерживают светодиод и пин: пин Arduino должен отдавать около 20 мА, и требовать от него больше 40 мА нельзя.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("8", { label: "10 Ω" }),
+    wiring: [
+      { from: pin("8"), to: { en: "10 Ω resistor", kk: "10 Ом резистор", ru: "Резистор 10 Ом" } },
+      { from: resistorOut, to: ledLong },
+      { from: ledShort, to: same("GND") },
+    ],
+    code: blinkCode,
+    symptom: {
+      en: "The LED blinks, but far too brightly, and it gets hot. After a while pin 8 stops working altogether.",
+      kk: "Жарықдиод жыпылықтайды, бірақ тым жарық жанып, қызады. Біраз уақыттан кейін 8-пин мүлдем істемей қалады.",
+      ru: "Светодиод мигает, но слишком ярко, и нагревается. Через некоторое время пин 8 совсем перестаёт работать.",
+    },
+    options: [
+      optLedBackwards,
+      {
+        en: "The resistor is far too small, so the current overloads the LED and the pin",
+        kk: "Резистор тым кіші, сондықтан ток жарықдиод пен пинге артық жүктеме түсіреді",
+        ru: "Резистор слишком маленький, и ток перегружает светодиод и пин",
+      },
+      { en: "delay(500) is too long", kk: "delay(500) тым ұзақ", ru: "delay(500) слишком длинная" },
+      oNotOutput,
+    ],
+    answer: 1,
+    faultType: "component",
+    explanation: {
+      en: "The resistor is 10 Ω instead of 220 Ω. The current tries to reach (5 − 2) V ÷ 10 Ω = 300 mA, many times more than the pin may give, and the pin burns out. Use 220 Ω.",
+      kk: "Резистор 220 Ом емес, 10 Ом. Ток (5 − 2) В ÷ 10 Ом = 300 мА-ге жетуге тырысады — бұл пин бере алатыннан бірнеше есе көп, сөйтіп пин күйіп кетеді. 220 Ом қой.",
+      ru: "Резистор 10 Ом вместо 220 Ом. Ток стремится к (5 − 2) В ÷ 10 Ом = 300 мА — во много раз больше, чем может отдать пин, и пин сгорает. Поставь 220 Ом.",
+    },
+  },
+  {
+    id: "active-low-led",
+    lesson: "digital-pins",
+    title: {
+      en: "The LED that does the opposite",
+      kk: "Керісінше істейтін жарықдиод",
+      ru: "Светодиод, который делает наоборот",
+    },
+    primer: {
+      en: "An LED lights when its long leg is at a higher voltage than its short leg. If the long leg is tied to 5V and the short leg goes to a pin, the LED lights when the pin is LOW and goes out when the pin is HIGH. The wiring decides which level means \"on\".",
+      kk: "Жарықдиод ұзын аяғындағы кернеу қысқа аяғындағыдан жоғары болғанда жанады. Ұзын аяғы 5V-қа, ал қысқа аяғы пинге қосылса, жарықдиод пин LOW болғанда жанып, HIGH болғанда сөнеді. Қай деңгей «қосулы» дегенді білдіретінін сызба шешеді.",
+      ru: "Светодиод горит, когда на длинной ножке напряжение выше, чем на короткой. Если длинная ножка подключена к 5V, а короткая идёт к пину, светодиод горит при LOW на пине и гаснет при HIGH. Какой уровень означает «включено», решает схема.",
+    },
+    goal: {
+      en: "The LED is on for one second, then off for three seconds.",
+      kk: "Жарықдиод бір секунд жанады, сосын үш секунд сөнеді.",
+      ru: "Светодиод секунду горит, затем три секунды не горит.",
+    },
+    diagram: {
+      pins: ["5V", "8"],
+      parts: [
+        { id: "d1", kind: "led", x: 250, y: 142, flip: true },
+        { id: "r1", kind: "resistor", label: "220 Ω", x: 370, y: 142 },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["uno.8", "d1.a"],
+        ["d1.b", "r1.a"],
+        ["r1.b", "5V"],
+      ],
+    },
+    wiring: [
+      { from: pin("8"), to: ledShort },
+      { from: ledLong, to: resistor },
+      { from: resistorOut, to: same("5V") },
+    ],
+    code: `void setup() {
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(8, HIGH);
+  delay(1000);
+  digitalWrite(8, LOW);
+  delay(3000);
+}`,
+    symptom: {
+      en: "It is the other way round: the LED is off for one second and on for three.",
+      kk: "Бәрі керісінше: жарықдиод бір секунд сөніп, үш секунд жанады.",
+      ru: "Всё наоборот: светодиод секунду не горит и три секунды горит.",
+    },
+    options: [
+      {
+        en: "The two delays are swapped",
+        kk: "Екі delay-дің орны ауысқан",
+        ru: "Две задержки перепутаны местами",
+      },
+      optLedBackwards,
+      {
+        en: "The LED sits between 5V and the pin, so LOW switches it on",
+        kk: "Жарықдиод 5V мен пиннің арасында тұр, сондықтан оны LOW қосады",
+        ru: "Светодиод стоит между 5V и пином, поэтому его включает LOW",
+      },
+      oNotOutput,
+    ],
+    answer: 2,
+    faultType: "wiring",
+    explanation: {
+      en: "The LED's long leg is on 5V and its short leg on pin 8. Current flows when pin 8 is LOW, so every HIGH and LOW has the opposite effect. Swap HIGH and LOW in the code, or rewire the LED from pin 8 to GND.",
+      kk: "Жарықдиодтың ұзын аяғы 5V-та, ал қысқа аяғы 8-пинде. Ток 8-пин LOW болғанда өтеді, сондықтан әр HIGH мен LOW керісінше әсер етеді. Кодтағы HIGH мен LOW-тың орнын ауыстыр немесе жарықдиодты 8-пин мен GND арасына қайта қос.",
+      ru: "Длинная ножка светодиода стоит на 5V, а короткая — на пине 8. Ток течёт, когда пин 8 в LOW, поэтому каждый HIGH и LOW действует наоборот. Поменяй HIGH и LOW в коде местами или переподключи светодиод между пином 8 и GND.",
+    },
+  },
+  {
+    id: "button-no-pullup",
+    lesson: "buttons",
+    title: { en: "Half of a pull-up", kk: "Жарты pull-up", ru: "Половина подтяжки" },
+    primer: {
+      en: "A button wired between a pin and GND gives the pin a level only while pressed. When released, something must pull the pin up to HIGH. INPUT_PULLUP does that; plain INPUT does not, and leaves the pin floating.",
+      kk: "Пин мен GND арасына қосылған батырма пинге тек басылған кезде ғана деңгей береді. Жіберілген кезде пинді бір нәрсе HIGH деңгейіне көтеріп тұруы керек. INPUT_PULLUP мұны істейді; жай INPUT істемейді де, пинді іліп қояды.",
+      ru: "Кнопка между пином и GND задаёт пину уровень, только пока нажата. Когда она отпущена, что-то должно подтягивать пин к HIGH. INPUT_PULLUP это делает; простой INPUT — нет, и пин остаётся висеть в воздухе.",
+    },
+    goal: buttonGoal,
+    diagram: pullupButtonCircuit,
+    wiring: pullupButtonWiring,
+    code: `void setup() {
+  pinMode(2, INPUT);
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  if (digitalRead(2) == LOW) {
+    digitalWrite(8, HIGH);
+  } else {
+    digitalWrite(8, LOW);
+  }
+}`,
+    symptom: {
+      en: "The LED lights when the button is pressed. With the button released it flickers on and off by itself.",
+      kk: "Батырманы басқанда жарықдиод жанады. Батырма жіберулі кезде ол өздігінен жанып-сөніп тұрады.",
+      ru: "При нажатии кнопки светодиод горит. Когда кнопка отпущена, он сам по себе мигает.",
+    },
+    options: [
+      {
+        en: "The button is worn out and needs replacing",
+        kk: "Батырма тозған, ауыстыру керек",
+        ru: "Кнопка износилась, её нужно заменить",
+      },
+      optLedBackwards,
+      oCheckHigh,
+      {
+        en: "The mode is INPUT, so nothing holds pin 2 HIGH when the button is released",
+        kk: "Режим INPUT, сондықтан батырма жіберулі кезде 2-пинді HIGH күйінде ештеңе ұстамайды",
+        ru: "Режим INPUT, поэтому при отпущенной кнопке ничто не держит пин 2 в HIGH",
+      },
+    ],
+    answer: 3,
+    faultType: "code",
+    explanation: {
+      en: "The button is wired correctly for a pull-up, but the code says pinMode(2, INPUT). Without the internal pull-up the released pin floats and reads noise. Change it to pinMode(2, INPUT_PULLUP).",
+      kk: "Батырма pull-up үшін дұрыс қосылған, бірақ кодта pinMode(2, INPUT) деп жазылған. Ішкі pull-up резисторынсыз жіберулі пин ілініп тұрады да, шуды оқиды. Оны pinMode(2, INPUT_PULLUP) деп өзгерт.",
+      ru: "Кнопка подключена правильно для подтяжки, но в коде написано pinMode(2, INPUT). Без внутренней подтяжки отпущенный пин висит в воздухе и читает помехи. Замени на pinMode(2, INPUT_PULLUP).",
+    },
+  },
+  {
+    id: "button-read-once",
+    lesson: "buttons",
+    title: {
+      en: "The button that is asked only once",
+      kk: "Бір-ақ рет сұралатын батырма",
+      ru: "Кнопка, которую спрашивают один раз",
+    },
+    primer: {
+      en: "digitalRead() takes one snapshot of the pin at the moment it runs. To follow a button, the snapshot must be taken again and again, inside loop(). A reading taken in setup() is a photograph of the first instant and never changes.",
+      kk: "digitalRead() орындалған сәтте пиннің бір «суретін» алады. Батырманы бақылау үшін сурет loop() ішінде қайта-қайта алынуы керек. setup() ішінде алынған көрсеткіш — алғашқы сәттің фотосуреті, ол ешқашан өзгермейді.",
+      ru: "digitalRead() делает один «снимок» пина в момент выполнения. Чтобы следить за кнопкой, снимок нужно делать снова и снова, внутри loop(). Показание, снятое в setup(), — фотография первого мгновения, и оно никогда не меняется.",
+    },
+    goal: buttonGoal,
+    diagram: pullupButtonCircuit,
+    wiring: pullupButtonWiring,
+    code: `bool pressed = false;
+
+void setup() {
+  pinMode(2, INPUT_PULLUP);
+  pinMode(8, OUTPUT);
+  pressed = digitalRead(2) == LOW;
+}
+
+void loop() {
+  digitalWrite(8, pressed);
+}`,
+    symptom: {
+      en: "The LED ignores the button. Only if the button is held down while the board starts does the LED come on, and then it stays on forever.",
+      kk: "Жарықдиод батырмаға мән бермейді. Тек плата іске қосылған кезде батырма басулы тұрса ғана жарықдиод жанады, сосын мәңгі жанып тұрады.",
+      ru: "Светодиод не реагирует на кнопку. Только если держать кнопку нажатой в момент запуска платы, светодиод загорается — и остаётся гореть навсегда.",
+    },
+    options: [
+      {
+        en: "INPUT_PULLUP inverts the LED",
+        kk: "INPUT_PULLUP жарықдиодты кері айналдырады",
+        ru: "INPUT_PULLUP переворачивает работу светодиода",
+      },
+      {
+        en: "The button is read once in setup() and never again",
+        kk: "Батырма setup() ішінде бір рет оқылады да, қайта оқылмайды",
+        ru: "Кнопка читается один раз в setup() и больше никогда",
+      },
+      oButtonResistor,
+      {
+        en: "A bool cannot be passed to digitalWrite",
+        kk: "digitalWrite-қа bool беруге болмайды",
+        ru: "В digitalWrite нельзя передавать bool",
+      },
+    ],
+    answer: 1,
+    faultType: "code",
+    explanation: {
+      en: "The line that reads the button is in setup(), so it runs a single time at start-up. loop() keeps writing that old value. Move pressed = digitalRead(2) == LOW; into loop(), before digitalWrite.",
+      kk: "Батырманы оқитын жол setup() ішінде тұр, сондықтан ол іске қосылғанда бір-ақ рет орындалады. loop() сол ескі мәнді жаза береді. pressed = digitalRead(2) == LOW; жолын loop() ішіне, digitalWrite-тың алдына көшір.",
+      ru: "Строка, которая читает кнопку, стоит в setup(), поэтому выполняется один раз при запуске. loop() продолжает записывать это старое значение. Перенеси pressed = digitalRead(2) == LOW; в loop(), перед digitalWrite.",
+    },
+  },
+  {
+    id: "bb-resistor-bypassed",
+    lesson: "breadboard",
+    title: {
+      en: "The resistor that resists nothing",
+      kk: "Ештеңені шектемейтін резистор",
+      ru: "Резистор, который ничего не ограничивает",
+    },
+    primer: {
+      en: "A part with both legs in the same row of five holes is bridged by the metal strip under it. For a resistor that means the current takes the strip and the resistor limits nothing, as if it were not there.",
+      kk: "Екі аяғы да бес тесіктен тұратын бір қатарда тұрған бөлшекті оның астындағы металл жолақ тұйықтайды. Резистор үшін бұл токтың жолақ арқылы өтетінін, ал резистордың ештеңені шектемейтінін білдіреді — ол жоқ сияқты.",
+      ru: "Деталь, у которой обе ножки стоят в одном ряду из пяти отверстий, замкнута металлической полоской под ней. Для резистора это значит, что ток идёт по полоске, а резистор ничего не ограничивает, как будто его нет.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("8"),
+    board: {
+      rows: 14,
+      items: [
+        { kind: "lead", at: "3a", label: "Pin 8" },
+        { kind: "resistor", from: "3c", to: "3d", label: "220 Ω" },
+        { kind: "led", long: "3e", short: "5e" },
+        { kind: "lead", at: "5a", label: "GND" },
+      ],
+    },
+    wiring: ledWiring("8"),
+    code: blinkCode,
+    symptom: tooBright,
+    options: [
+      optLedBackwards,
+      optSplitRail,
+      {
+        en: "Both legs of the resistor are in the same row, so the current goes around it",
+        kk: "Резистордың екі аяғы да бір қатарда тұр, сондықтан ток оны айналып өтеді",
+        ru: "Обе ножки резистора стоят в одном ряду, и ток идёт в обход него",
+      },
+      {
+        en: "220 Ω is too small for a 5 V pin",
+        kk: "220 Ом 5 В пин үшін тым аз",
+        ru: "220 Ом слишком мало для пина на 5 В",
+      },
+    ],
+    answer: 2,
+    faultType: "wiring",
+    explanation: {
+      en: "The plan has a resistor between pin 8 and the LED. On the board both of its legs are in row 3, so the strip of row 3 carries the current straight to the LED with nothing limiting it. Move one leg of the resistor to another row and connect the LED there.",
+      kk: "Сызба бойынша 8-пин мен жарықдиодтың арасында резистор тұр. Тақтада оның екі аяғы да 3-қатарда, сондықтан 3-қатардың жолағы токты ештеңе шектемей тікелей жарықдиодқа жеткізеді. Резистордың бір аяғын басқа қатарға ауыстырып, жарықдиодты сонда қос.",
+      ru: "По плану между пином 8 и светодиодом стоит резистор. На плате обе его ножки в ряду 3, поэтому полоска ряда 3 проводит ток прямо к светодиоду без всякого ограничения. Переставь одну ножку резистора в другой ряд и подключи светодиод там.",
+    },
+  },
+  {
+    id: "bb-across-gap",
+    lesson: "breadboard",
+    title: {
+      en: "Two halves of one row",
+      kk: "Бір қатардың екі жартысы",
+      ru: "Две половины одного ряда",
+    },
+    primer: {
+      en: "The groove down the middle of a breadboard cuts every row in two. Holes a to e are one strip and holes f to j are another, even though they share a row number. To connect the two halves you need a wire across the groove.",
+      kk: "Макет тақтасының ортасындағы ойық әр қатарды екіге бөледі. a–e тесіктері — бір жолақ, f–j тесіктері — басқа жолақ, олардың қатар нөмірі бірдей болса да. Екі жартыны қосу үшін ойықтың үстінен сым салу керек.",
+      ru: "Канавка посередине макетной платы разрезает каждый ряд на две части. Отверстия a–e — одна полоска, отверстия f–j — другая, хотя номер ряда у них общий. Чтобы соединить две половины, нужен провод через канавку.",
+    },
+    goal: blinkGoal,
+    diagram: ledCircuit("8"),
+    board: {
+      rows: 14,
+      items: [
+        { kind: "lead", at: "3a", label: "Pin 8" },
+        { kind: "resistor", from: "3c", to: "7c", label: "220 Ω" },
+        { kind: "led", long: "7g", short: "9g" },
+        { kind: "wire", from: "9f", to: "9e" },
+        { kind: "lead", at: "9a", label: "GND" },
+      ],
+    },
+    wiring: ledWiring("8"),
+    code: blinkCode,
+    symptom: neverLights,
+    options: [
+      optSameRow,
+      optLedBackwards,
+      optSplitRail,
+      {
+        en: "Row 7 is cut by the middle groove: the resistor is above it and the LED below",
+        kk: "7-қатарды ортадағы ойық бөліп тұр: резистор оның үстінде, жарықдиод астында",
+        ru: "Ряд 7 разрезан канавкой: резистор стоит выше неё, а светодиод ниже",
+      },
+    ],
+    answer: 3,
+    faultType: "wiring",
+    explanation: {
+      en: "The resistor ends at 7c, above the groove, and the LED's long leg is at 7g, below it. Same row number, two separate strips. Row 9 shows how to do it right: a short wire joins 9e and 9f. Add the same kind of wire from 7e to 7f.",
+      kk: "Резистор ойықтың үстіндегі 7c тесігінде аяқталады, ал жарықдиодтың ұзын аяғы ойықтың астындағы 7g тесігінде тұр. Қатар нөмірі бірдей, бірақ жолақтары бөлек. Қалай дұрыс істеу керегін 9-қатар көрсетеді: қысқа сым 9e мен 9f-ті қосып тұр. 7e-ден 7f-ке дәл сондай сым қос.",
+      ru: "Резистор заканчивается в 7c, выше канавки, а длинная ножка светодиода стоит в 7g, ниже неё. Номер ряда один, а полоски две. Ряд 9 показывает, как сделать правильно: короткий провод соединяет 9e и 9f. Добавь такой же провод от 7e к 7f.",
+    },
+  },
+  {
+    id: "pwm-percent",
+    lesson: "analog-pwm",
+    title: { en: "Fifty is not half", kk: "Елу — жарты емес", ru: "Пятьдесят — это не половина" },
+    primer: {
+      en: "analogWrite() does not take a percentage. Its scale runs from 0 (always off) to 255 (always on). Half brightness is about 127, and 50 is only about a fifth of the way.",
+      kk: "analogWrite() пайызды қабылдамайды. Оның шкаласы 0-ден (үнемі өшірулі) 255-ке дейін (үнемі қосулы). Жарты жарық — шамамен 127, ал 50 — жолдың бестен бір бөлігі ғана.",
+      ru: "analogWrite() принимает не проценты. Его шкала идёт от 0 (всегда выключено) до 255 (всегда включено). Половина яркости — это около 127, а 50 — только пятая часть пути.",
+    },
+    goal: {
+      en: "The LED glows at half brightness.",
+      kk: "Жарықдиод жарты жарықпен жанады.",
+      ru: "Светодиод горит вполсилы.",
+    },
+    diagram: ledCircuit("9"),
+    wiring: ledWiring("9"),
+    code: `void setup() {
+  pinMode(9, OUTPUT);
+}
+
+void loop() {
+  analogWrite(9, 50);
+}`,
+    symptom: {
+      en: "The LED glows, but much more dimly than half brightness.",
+      kk: "Жарықдиод жанады, бірақ жарты жарықтан әлдеқайда күңгірт.",
+      ru: "Светодиод горит, но намного тусклее, чем вполсилы.",
+    },
+    options: [
+      oNoPwm9,
+      oRes220Large,
+      {
+        en: "50 is out of 255, about 20 %, not 50 %",
+        kk: "50 — 255-тен алынған мән, яғни 50 % емес, шамамен 20 %",
+        ru: "50 — это из 255, то есть около 20 %, а не 50 %",
+      },
+      {
+        en: "analogWrite needs a delay after it",
+        kk: "analogWrite-тан кейін delay керек",
+        ru: "После analogWrite нужна задержка",
+      },
+    ],
+    answer: 2,
+    faultType: "code",
+    explanation: {
+      en: "analogWrite(9, 50) keeps the pin on for 50 ÷ 255 ≈ 20 % of the time. For half brightness write analogWrite(9, 127).",
+      kk: "analogWrite(9, 50) пинді уақыттың 50 ÷ 255 ≈ 20 %-ында ғана қосулы ұстайды. Жарты жарық үшін analogWrite(9, 127) деп жаз.",
+      ru: "analogWrite(9, 50) держит пин включённым 50 ÷ 255 ≈ 20 % времени. Для половины яркости напиши analogWrite(9, 127).",
+    },
+  },
+  {
+    id: "fade-no-delay",
+    lesson: "analog-pwm",
+    title: {
+      en: "The fade that is over too soon",
+      kk: "Тым тез бітетін жану",
+      ru: "Плавность, которая заканчивается слишком быстро",
+    },
+    primer: {
+      en: "A fade is 256 small steps of brightness. Without a pause between the steps the board runs through all of them in a few thousandths of a second, again and again. The eye cannot follow and sees only the average.",
+      kk: "Біртіндеп жану — жарықтың 256 кішкентай қадамы. Қадамдардың арасында үзіліс болмаса, плата олардың бәрін секундтың бірнеше мыңнан бір бөлігінде қайта-қайта өтіп шығады. Көз ілесе алмай, тек орташа мәнді көреді.",
+      ru: "Плавное разгорание — это 256 маленьких шагов яркости. Без паузы между шагами плата пробегает их все за несколько тысячных долей секунды, снова и снова. Глаз не успевает и видит только среднее.",
+    },
+    goal: fadeGoal,
+    diagram: ledCircuit("9"),
+    wiring: ledWiring("9"),
+    code: `void setup() {
+  pinMode(9, OUTPUT);
+}
+
+void loop() {
+  for (int b = 0; b <= 255; b++) {
+    analogWrite(9, b);
+  }
+}`,
+    symptom: {
+      en: "The LED glows steadily at medium brightness. No fading can be seen.",
+      kk: "Жарықдиод орташа жарықпен тұрақты жанып тұрады. Біртіндеп жану байқалмайды.",
+      ru: "Светодиод ровно светится со средней яркостью. Плавного разгорания не видно.",
+    },
+    options: [
+      oNoPwm9,
+      {
+        en: "There is no delay inside the for loop, so the whole fade takes a few milliseconds",
+        kk: "for циклінің ішінде delay жоқ, сондықтан бүкіл жану бірнеше миллисекундқа ғана созылады",
+        ru: "Внутри цикла for нет задержки, и всё разгорание занимает несколько миллисекунд",
+      },
+      {
+        en: "The variable should be float, not int",
+        kk: "Айнымалы int емес, float болуы керек",
+        ru: "Переменная должна быть float, а не int",
+      },
+      {
+        en: "An ordinary LED cannot be dimmed",
+        kk: "Қарапайым жарықдиодтың жарығын реттеуге болмайды",
+        ru: "Яркость обычного светодиода нельзя менять",
+      },
+    ],
+    answer: 1,
+    faultType: "code",
+    explanation: {
+      en: "The loop from 0 to 255 has no pause, so each full fade is over almost instantly and repeats hundreds of times a second. The eye averages it to medium brightness. Add delay(10); after analogWrite(9, b);.",
+      kk: "0-ден 255-ке дейінгі циклде үзіліс жоқ, сондықтан әр толық жану лезде аяқталып, секундына жүздеген рет қайталанады. Көз мұны орташа жарық ретінде қабылдайды. analogWrite(9, b); жолынан кейін delay(10); қос.",
+      ru: "В цикле от 0 до 255 нет паузы, поэтому каждое полное разгорание заканчивается почти мгновенно и повторяется сотни раз в секунду. Глаз усредняет это до средней яркости. Добавь delay(10); после analogWrite(9, b);.",
+    },
+  },
+  {
+    id: "threshold-reversed",
+    lesson: "sensors",
+    title: {
+      en: "Day and night swapped",
+      kk: "Күн мен түн ауысып кеткен",
+      ru: "День и ночь поменялись местами",
+    },
+    primer: {
+      en: "A sensor gives a number; what the number means depends on the wiring. With the photoresistor between 5V and the analog pin and a fixed resistor to GND, more light gives a larger number. A comparison in the code has to match that direction.",
+      kk: "Датчик сан береді; ол санның нені білдіретіні сызбаға байланысты. Фоторезистор 5V мен аналогтық пиннің арасында, ал тұрақты резистор GND-ға қосылса, жарық көбейген сайын сан өседі. Кодтағы салыстыру осы бағытқа сәйкес келуі керек.",
+      ru: "Датчик выдаёт число; что это число означает, зависит от схемы. Если фоторезистор стоит между 5V и аналоговым пином, а постоянный резистор идёт к GND, то чем больше света, тем больше число. Сравнение в коде должно соответствовать этому направлению.",
+    },
+    goal: {
+      en: "The Serial Monitor prints \"dark\" when the sensor is covered and \"light\" otherwise.",
+      kk: "Датчик жабылғанда Serial Monitor «dark», ал қалған уақытта «light» деп шығарады.",
+      ru: "Serial Monitor печатает «dark», когда датчик закрыт, и «light» в остальное время.",
+    },
+    diagram: {
+      pins: ["5V", "A0", "GND"],
+      parts: [
+        { id: "ldr", kind: "resistor", label: "LDR", x: 250, y: 142 },
+        { id: "r2", kind: "resistor", label: "10 kΩ", x: 250, y: 230 },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["uno.A0", "ldr.a"],
+        ["ldr.b", "5V"],
+        ["uno.A0", "r2.a"],
+        ["r2.b", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      {
+        from: same("A0"),
+        to: {
+          en: "Photoresistor, leg 1",
+          kk: "Фоторезистордың 1-аяғы",
+          ru: "Фоторезистор, ножка 1",
+        },
+      },
+      {
+        from: {
+          en: "Photoresistor, leg 2",
+          kk: "Фоторезистордың 2-аяғы",
+          ru: "Фоторезистор, ножка 2",
+        },
+        to: same("5V"),
+      },
+      {
+        from: same("A0"),
+        to: { en: "10 kΩ resistor", kk: "10 кОм резистор", ru: "Резистор 10 кОм" },
+      },
+      { from: resistorOut, to: same("GND") },
+    ],
+    code: `void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int light = analogRead(A0);
+  if (light > 500) {
+    Serial.println("dark");
+  } else {
+    Serial.println("light");
+  }
+  delay(500);
+}`,
+    symptom: {
+      en: "It prints \"dark\" in bright light and \"light\" when the sensor is covered.",
+      kk: "Жарық көп болғанда «dark», ал датчик жабылғанда «light» деп шығарады.",
+      ru: "На ярком свету печатает «dark», а когда датчик закрыт — «light».",
+    },
+    options: [
+      {
+        en: "The photoresistor is plugged in backwards",
+        kk: "Фоторезистор теріс қосылған",
+        ru: "Фоторезистор вставлен наоборот",
+      },
+      {
+        en: "The comparison is the wrong way round: with this wiring a large number means bright",
+        kk: "Салыстыру кері жазылған: бұл сызбада үлкен сан жарық көп дегенді білдіреді",
+        ru: "Сравнение написано наоборот: в этой схеме большое число означает яркий свет",
+      },
+      {
+        en: "The 10 kΩ resistor is missing",
+        kk: "10 кОм резистор жоқ",
+        ru: "Нет резистора 10 кОм",
+      },
+      oBaud,
+    ],
+    answer: 1,
+    faultType: "code",
+    explanation: {
+      en: "The divider is wired correctly: more light, higher reading. The code calls a high reading \"dark\", which is backwards. Change the condition to light < 500.",
+      kk: "Бөлгіш дұрыс жиналған: жарық көп болса, көрсеткіш жоғары. Ал код жоғары көрсеткішті «dark» деп атайды — бұл кері. Шартты light < 500 деп өзгерт.",
+      ru: "Делитель собран правильно: больше света — выше показание. А код называет высокое показание «dark», то есть наоборот. Поменяй условие на light < 500.",
+    },
+  },
+  {
+    id: "pot-on-3v3",
+    lesson: "sensors",
+    title: {
+      en: "The knob that stops at two thirds",
+      kk: "Үштен екісінде тоқтайтын тұтқа",
+      ru: "Ручка, которая останавливается на двух третях",
+    },
+    primer: {
+      en: "analogRead() compares the pin's voltage with 5 V: 5 V reads 1023, 2.5 V reads about 512. A sensor fed from the 3.3V pin can never output more than 3.3 V, so its readings stop at about 675.",
+      kk: "analogRead() пиндегі кернеуді 5 В-пен салыстырады: 5 В — 1023, 2,5 В — шамамен 512 болып оқылады. 3.3V пинінен қоректенетін датчик 3,3 В-тан артық кернеу шығара алмайды, сондықтан оның көрсеткіші шамамен 675-те тоқтайды.",
+      ru: "analogRead() сравнивает напряжение на пине с 5 В: 5 В читается как 1023, 2,5 В — примерно как 512. Датчик, запитанный от пина 3.3V, не может выдать больше 3,3 В, поэтому его показания останавливаются примерно на 675.",
+    },
+    goal: potGoal,
+    diagram: {
+      pins: ["3.3V", "A0", "GND"],
+      parts: [{ id: "pot", kind: "chip", title: potTitle, x: 330, y: 76, left: ["1", "2", "3"] }],
+      wires: [
+        ["uno.3.3V", "pot.1"],
+        ["uno.A0", "pot.2"],
+        ["pot.3", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: potLeg1, to: same("3.3V") },
+      { from: potLeg2, to: same("A0") },
+      { from: potLeg3, to: same("GND") },
+    ],
+    code: potReadCode,
+    symptom: {
+      en: "The numbers follow the knob, but at the end of the turn they stop at about 675 and never reach 1023.",
+      kk: "Сандар тұтқаға сәйкес өзгереді, бірақ бұрылыстың соңында шамамен 675-те тоқтап, 1023-ке жетпейді.",
+      ru: "Числа следуют за ручкой, но в конце поворота останавливаются примерно на 675 и не доходят до 1023.",
+    },
+    options: [
+      oPotWorn,
+      {
+        en: "analogRead can only count to 675",
+        kk: "analogRead тек 675-ке дейін санай алады",
+        ru: "analogRead умеет считать только до 675",
+      },
+      { en: "delay(200) is too long", kk: "delay(200) тым ұзақ", ru: "delay(200) слишком длинная" },
+      {
+        en: "The potentiometer's top leg is on 3.3V instead of 5V",
+        kk: "Потенциометрдің жоғарғы аяғы 5V орнына 3.3V-қа қосылған",
+        ru: "Верхняя ножка потенциометра подключена к 3.3V вместо 5V",
+      },
+    ],
+    answer: 3,
+    faultType: "wiring",
+    explanation: {
+      en: "Leg 1 is on the 3.3V pin, so the highest voltage the knob can give is 3.3 V, and 3.3 ÷ 5 × 1023 ≈ 675. Move leg 1 to the 5V pin to use the full range.",
+      kk: "1-аяқ 3.3V пиніне қосылған, сондықтан тұтқа бере алатын ең жоғары кернеу — 3,3 В, ал 3,3 ÷ 5 × 1023 ≈ 675. Толық ауқымды пайдалану үшін 1-аяқты 5V пиніне ауыстыр.",
+      ru: "Ножка 1 стоит на пине 3.3V, поэтому наибольшее напряжение, которое может дать ручка, — 3,3 В, а 3,3 ÷ 5 × 1023 ≈ 675. Переставь ножку 1 на пин 5V, чтобы использовать весь диапазон.",
+    },
+  },
+  {
+    id: "serial-write",
+    lesson: "serial",
+    title: {
+      en: "Letters instead of numbers",
+      kk: "Сандардың орнына әріптер",
+      ru: "Буквы вместо чисел",
+    },
+    primer: {
+      en: "Serial.print() turns a number into readable digits: 65 is sent as \"6\" and \"5\". Serial.write() sends the number as one raw byte, and the monitor shows the character with that code: 65 appears as the letter A.",
+      kk: "Serial.print() санды оқуға болатын цифрларға айналдырады: 65 «6» және «5» болып жіберіледі. Serial.write() санды бір «шикі» байт ретінде жібереді, ал монитор сол кодқа сәйкес таңбаны көрсетеді: 65 A әрпі болып шығады.",
+      ru: "Serial.print() превращает число в читаемые цифры: 65 отправляется как «6» и «5». Serial.write() отправляет число одним «сырым» байтом, и монитор показывает символ с таким кодом: 65 выглядит как буква A.",
+    },
+    goal: {
+      en: "The Serial Monitor shows the knob position as a number from 0 to 255.",
+      kk: "Serial Monitor тұтқаның күйін 0-ден 255-ке дейінгі сан түрінде көрсетеді.",
+      ru: "Serial Monitor показывает положение ручки числом от 0 до 255.",
+    },
+    diagram: potCircuit,
+    wiring: potWiring,
+    code: `void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int value = analogRead(A0) / 4;
+  Serial.write(value);
+  delay(200);
+}`,
+    symptom: {
+      en: "The monitor is set to 9600 baud, yet it shows single letters and symbols that change as the knob turns: A, B, C, z, ~.",
+      kk: "Монитор 9600 бодқа қойылған, бірақ ол тұтқаны бұрағанда өзгеретін жеке әріптер мен таңбаларды көрсетеді: A, B, C, z, ~.",
+      ru: "Монитор настроен на 9600 бод, но показывает отдельные буквы и символы, которые меняются при повороте ручки: A, B, C, z, ~.",
+    },
+    options: [
+      oBaud,
+      {
+        en: "Dividing by 4 turns numbers into letters",
+        kk: "4-ке бөлу сандарды әріптерге айналдырады",
+        ru: "Деление на 4 превращает числа в буквы",
+      },
+      {
+        en: "Serial.write() sends a raw byte, which the monitor shows as a character",
+        kk: "Serial.write() «шикі» байт жібереді, ал монитор оны таңба ретінде көрсетеді",
+        ru: "Serial.write() отправляет «сырой» байт, а монитор показывает его как символ",
+      },
+      {
+        en: "The potentiometer is noisy",
+        kk: "Потенциометр шу береді",
+        ru: "Потенциометр даёт помехи",
+      },
+    ],
+    answer: 2,
+    faultType: "code",
+    explanation: {
+      en: "The speed matches, so this is not garbage: each symbol is the character whose code equals the reading. Use Serial.println(value) to send the number as digits.",
+      kk: "Жылдамдық сәйкес келеді, демек бұл кездейсоқ таңбалар емес: әр таңба — коды көрсеткішке тең символ. Санды цифрлармен жіберу үшін Serial.println(value) қолдан.",
+      ru: "Скорость совпадает, так что это не мусор: каждый символ — это знак, код которого равен показанию. Чтобы отправить число цифрами, используй Serial.println(value).",
+    },
+  },
+  {
+    id: "serial-quotes",
+    lesson: "serial",
+    title: {
+      en: "The word instead of the value",
+      kk: "Мәннің орнына сөз",
+      ru: "Слово вместо значения",
+    },
+    primer: {
+      en: "Quotation marks make text. Serial.println(\"value\") prints the five letters v-a-l-u-e. Without the quotation marks, Serial.println(value) prints the number stored in the variable called value.",
+      kk: "Тырнақша мәтін жасайды. Serial.println(\"value\") v-a-l-u-e деген бес әріпті шығарады. Тырнақшасыз Serial.println(value) value деп аталатын айнымалыда сақталған санды шығарады.",
+      ru: "Кавычки делают текст. Serial.println(\"value\") печатает пять букв v-a-l-u-e. Без кавычек Serial.println(value) печатает число, которое хранится в переменной с именем value.",
+    },
+    goal: potGoal,
+    diagram: potCircuit,
+    wiring: potWiring,
+    code: `void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int value = analogRead(A0);
+  Serial.println("value");
+  delay(200);
+}`,
+    symptom: {
+      en: "The Serial Monitor prints the word value over and over, and never a number.",
+      kk: "Serial Monitor санды емес, value деген сөзді қайта-қайта шығарады.",
+      ru: "Serial Monitor снова и снова печатает слово value и ни разу — число.",
+    },
+    options: [
+      {
+        en: "The potentiometer is not connected to 5V",
+        kk: "Потенциометр 5V-қа қосылмаған",
+        ru: "Потенциометр не подключён к 5V",
+      },
+      oBaud,
+      { en: "analogRead returns text", kk: "analogRead мәтін қайтарады", ru: "analogRead возвращает текст" },
+      {
+        en: "The variable is in quotation marks, so its name is printed as text",
+        kk: "Айнымалы тырнақшаға алынған, сондықтан оның атауы мәтін ретінде шығады",
+        ru: "Переменная взята в кавычки, поэтому её имя печатается как текст",
+      },
+    ],
+    answer: 3,
+    faultType: "code",
+    explanation: {
+      en: "Serial.println(\"value\") sends the text between the quotation marks. Remove them: Serial.println(value) sends the number the variable holds.",
+      kk: "Serial.println(\"value\") тырнақшаның ішіндегі мәтінді жібереді. Тырнақшаларды алып таста: Serial.println(value) айнымалыда сақталған санды жібереді.",
+      ru: "Serial.println(\"value\") отправляет текст между кавычками. Убери их: Serial.println(value) отправит число, которое хранится в переменной.",
+    },
+  },
+  {
+    id: "sonar-no-trig",
+    lesson: "reading-diagrams",
+    title: { en: "Nobody says go", kk: "Ешкім «баста» демейді", ru: "Никто не даёт старт" },
+    primer: {
+      en: "The HC-SR04 does nothing on its own. It measures only after it gets a start pulse on its Trig pin. On a diagram, check that each of its four contacts has a wire: two for power and two for signals.",
+      kk: "HC-SR04 өздігінен ештеңе істемейді. Ол Trig пиніне бастау импульсі келгеннен кейін ғана өлшейді. Сызбада оның төрт контактісінің әрқайсысында сым бар-жоғын тексер: екеуі қорекке, екеуі сигналға арналған.",
+      ru: "HC-SR04 сам ничего не делает. Он измеряет только после того, как получит стартовый импульс на пин Trig. На схеме проверь, что у каждого из четырёх его контактов есть провод: два для питания и два для сигналов.",
+    },
+    goal: sonarGoal,
+    diagram: {
+      pins: ["5V", "9", "10", "GND"],
+      parts: [
+        {
+          id: "hc",
+          kind: "chip",
+          title: same("HC-SR04"),
+          x: 330,
+          y: 102,
+          left: ["VCC", "Trig", "Echo", "GND"],
+        },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["hc.VCC", "5V"],
+        ["uno.10", "hc.Echo"],
+        ["hc.GND", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: same("HC-SR04 VCC"), to: same("5V") },
+      { from: same("HC-SR04 Echo"), to: pin("10") },
+      { from: same("HC-SR04 GND"), to: same("GND") },
+    ],
+    code: sonarCode,
+    symptom: sonarZero,
+    options: [
+      {
+        en: "The Trig contact has no wire, so the sensor never gets a start pulse",
+        kk: "Trig контактісінде сым жоқ, сондықтан датчикке бастау импульсі келмейді",
+        ru: "У контакта Trig нет провода, и датчик не получает стартовый импульс",
+      },
+      {
+        en: "The sensor's GND is not connected, so the sensor has no power",
+        kk: "Датчиктің GND контактісі қосылмаған, сондықтан датчикте қорек жоқ",
+        ru: "GND датчика не подключён, поэтому у датчика нет питания",
+      },
+      {
+        en: "Trig and Echo are swapped between the wiring and the code",
+        kk: "Сызба мен кодта Trig пен Echo орындары ауысып кеткен",
+        ru: "Trig и Echo перепутаны между схемой и кодом",
+      },
+      { en: "The division by 58 is wrong", kk: "58-ге бөлу қате", ru: "Деление на 58 неверное" },
+    ],
+    answer: 0,
+    faultType: "wiring",
+    explanation: {
+      en: "Power and Echo are wired, and the pin numbers in the code are right. But Trig and pin 9 are both hollow dots: the start pulse never arrives, the sensor never sends sound, and pulseIn() times out with 0. Connect Trig to pin 9.",
+      kk: "Қорек пен Echo қосылған, кодтағы пин нөмірлері де дұрыс. Бірақ Trig те, 9-пин де — іші бос нүктелер: бастау импульсі жетпейді, датчик дыбыс жібермейді, ал pulseIn() күту уақыты біткенде 0 қайтарады. Trig-ті 9-пинге қос.",
+      ru: "Питание и Echo подключены, номера пинов в коде верные. Но Trig и пин 9 — пустые точки: стартовый импульс не приходит, датчик не посылает звук, и pulseIn() по тайм-ауту возвращает 0. Соедини Trig с пином 9.",
+    },
+  },
+  {
+    id: "servo-no-signal",
+    lesson: "reading-diagrams",
+    title: {
+      en: "Powered, but not told what to do",
+      kk: "Қорегі бар, бірақ бұйрығы жоқ",
+      ru: "Питание есть, а команд нет",
+    },
+    primer: {
+      en: "A servo has three wires: plus, minus and signal. Power alone does not move it; the position comes over the signal wire. Read the diagram contact by contact and make sure none of the three is left empty.",
+      kk: "Сервода үш сым бар: плюс, минус және сигнал. Қорек қана оны қозғалтпайды; күйі сигнал сымы арқылы беріледі. Сызбаны контакт бойынша оқып, үшеуінің ешқайсысы бос қалмағанына көз жеткіз.",
+      ru: "У серво три провода: плюс, минус и сигнал. Одно питание его не двигает; положение передаётся по сигнальному проводу. Читай схему контакт за контактом и убедись, что ни один из трёх не остался пустым.",
+    },
+    goal: sweepGoal,
+    diagram: {
+      pins: ["5V", "9", "GND"],
+      parts: [
+        {
+          id: "servo",
+          kind: "chip",
+          title: smallServoTitle,
+          x: 330,
+          y: 76,
+          left: ["V+", "Signal", "GND"],
+        },
+      ],
+      wires: [
+        ["uno.5V", "5V"],
+        ["servo.V+", "5V"],
+        ["servo.GND", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: servoV, to: same("5V") },
+      { from: servoGnd, to: same("GND") },
+    ],
+    code: sweepCode,
+    symptom: servoStill,
+    options: [
+      {
+        en: "The servo takes more current than the 5V pin can give",
+        kk: "Серво 5V пині бере алатыннан көп ток тартады",
+        ru: "Серво потребляет больше тока, чем может дать пин 5V",
+      },
+      {
+        en: "The signal contact of the servo is not connected to anything",
+        kk: "Сервоның сигнал контактісі ештеңеге қосылмаған",
+        ru: "Сигнальный контакт серво ни к чему не подключён",
+      },
+      {
+        en: "The code attaches the servo to the wrong pin",
+        kk: "Код сервоны қате пинге тіркейді",
+        ru: "Код привязывает серво не к тому пину",
+      },
+      {
+        en: "delay(1000) is too short for a servo",
+        kk: "delay(1000) серво үшін тым қысқа",
+        ru: "delay(1000) слишком короткая для серво",
+      },
+    ],
+    answer: 1,
+    faultType: "wiring",
+    explanation: {
+      en: "The servo's Signal contact and pin 9 are hollow dots. The code is correct and sends the signal out on pin 9, but no wire carries it to the servo. Connect Signal to pin 9.",
+      kk: "Сервоның Signal контактісі мен 9-пин — іші бос нүктелер. Код дұрыс және сигналды 9-пинге шығарады, бірақ оны сервоға жеткізетін сым жоқ. Signal-ды 9-пинге қос.",
+      ru: "Контакт Signal у серво и пин 9 — пустые точки. Код верный и выдаёт сигнал на пин 9, но ни один провод не несёт его к серво. Соедини Signal с пином 9.",
+    },
+  },
+  {
+    id: "led-on-tx",
+    lesson: "special-pins",
+    title: {
+      en: "The LED that listens to the conversation",
+      kk: "Әңгімені тыңдап тұратын жарықдиод",
+      ru: "Светодиод, который подслушивает разговор",
+    },
+    primer: {
+      en: "Pin 1 is TX, the line on which the board sends text to the computer. Once Serial.begin() has run, that line belongs to the serial port: digitalWrite() on pin 1 no longer has any effect, and the pin simply shows what is being sent.",
+      kk: "1-пин — TX, плата компьютерге мәтін жіберетін желі. Serial.begin() орындалғаннан кейін бұл желі тізбекті портқа тиесілі болады: 1-пинге digitalWrite() жасаудың әсері болмайды, ал пин жай не жіберіліп жатқанын көрсетеді.",
+      ru: "Пин 1 — это TX, линия, по которой плата отправляет текст на компьютер. После Serial.begin() эта линия принадлежит последовательному порту: digitalWrite() на пине 1 больше не действует, и пин просто показывает, что передаётся.",
+    },
+    goal: {
+      en: "The LED blinks once a second, and the Serial Monitor prints \"on\" and \"off\" in step with it.",
+      kk: "Жарықдиод секундына бір рет жыпылықтайды, ал Serial Monitor соған сәйкес «on» және «off» деп шығарады.",
+      ru: "Светодиод мигает раз в секунду, а Serial Monitor в такт печатает «on» и «off».",
+    },
+    diagram: ledCircuit("1"),
+    wiring: ledWiring("1"),
+    code: `void setup() {
+  Serial.begin(9600);
+  pinMode(1, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(1, HIGH);
+  Serial.println("on");
+  delay(500);
+  digitalWrite(1, LOW);
+  Serial.println("off");
+  delay(500);
+}`,
+    symptom: {
+      en: "The text in the monitor is correct. The LED, though, is on almost all the time and only flickers for an instant when a line is printed.",
+      kk: "Монитордағы мәтін дұрыс. Ал жарықдиод үнемі дерлік жанып тұрады және жол шығарылған сәтте ғана бір мезет жыпылық етеді.",
+      ru: "Текст в мониторе правильный. А светодиод горит почти всё время и лишь на мгновение мерцает, когда печатается строка.",
+    },
+    options: [
+      oRes220Large,
+      {
+        en: "Serial.println is too slow for blinking",
+        kk: "Serial.println жыпылықтау үшін тым баяу",
+        ru: "Serial.println слишком медленный для мигания",
+      },
+      {
+        en: "Pin 1 is the serial TX line, so the port controls it, not digitalWrite",
+        kk: "1-пин — тізбекті порттың TX желісі, сондықтан оны digitalWrite емес, порт басқарады",
+        ru: "Пин 1 — линия TX последовательного порта, и управляет им порт, а не digitalWrite",
+      },
+      optLedBackwards,
+    ],
+    answer: 2,
+    faultType: "limits",
+    explanation: {
+      en: "With the serial port running, pin 1 rests at HIGH and dips only while characters are sent, so the LED shows the data instead of blinking. Move the LED to a free pin such as 8 and change the code to match.",
+      kk: "Тізбекті порт жұмыс істеп тұрғанда 1-пин HIGH күйінде тұрады және тек таңбалар жіберілген кезде ғана төмендейді, сондықтан жарықдиод жыпылықтаудың орнына деректерді көрсетеді. Жарықдиодты 8 сияқты бос пинге ауыстырып, кодты соған сәйкес өзгерт.",
+      ru: "Когда последовательный порт работает, пин 1 находится в HIGH и опускается только во время передачи символов, поэтому светодиод показывает данные, а не мигает. Переставь светодиод на свободный пин, например 8, и поправь код.",
+    },
+  },
+  {
+    id: "analog-read-digital-pin",
+    lesson: "special-pins",
+    title: {
+      en: "Pin 3 and A3 are not the same",
+      kk: "3-пин мен A3 — бір нәрсе емес",
+      ru: "Пин 3 и A3 — не одно и то же",
+    },
+    primer: {
+      en: "Only the pins labelled A0 to A5 can measure a voltage. analogRead(3) does not mean digital pin 3: it means analog pin A3. A sensor wired to digital pin 3 cannot be measured at all.",
+      kk: "Кернеуді тек A0–A5 деп белгіленген пиндер ғана өлшей алады. analogRead(3) 3-сандық пинді білдірмейді: ол A3 аналогтық пинін білдіреді. 3-сандық пинге қосылған датчикті мүлдем өлшеу мүмкін емес.",
+      ru: "Измерять напряжение умеют только пины с надписями A0–A5. analogRead(3) означает не цифровой пин 3, а аналоговый пин A3. Датчик, подключённый к цифровому пину 3, измерить вообще нельзя.",
+    },
+    goal: potGoal,
+    diagram: {
+      pins: ["5V", "3", "GND"],
+      parts: [{ id: "pot", kind: "chip", title: potTitle, x: 330, y: 76, left: ["1", "2", "3"] }],
+      wires: [
+        ["uno.5V", "5V"],
+        ["pot.1", "5V"],
+        ["uno.3", "pot.2"],
+        ["pot.3", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: potLeg1, to: same("5V") },
+      { from: potLeg2, to: pin("3") },
+      { from: potLeg3, to: same("GND") },
+    ],
+    code: `void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int value = analogRead(3);
+  Serial.println(value);
+  delay(200);
+}`,
+    symptom: driftSymptom,
+    options: [
+      oPotWorn,
+      oBaud,
+      {
+        en: "The outer legs are swapped",
+        kk: "Шеткі аяқтардың орны ауысқан",
+        ru: "Крайние ножки перепутаны",
+      },
+      {
+        en: "The knob is on digital pin 3, but analogRead(3) reads the unconnected pin A3",
+        kk: "Тұтқа 3-сандық пинде тұр, ал analogRead(3) ештеңе қосылмаған A3 пинін оқиды",
+        ru: "Ручка стоит на цифровом пине 3, а analogRead(3) читает неподключённый пин A3",
+      },
+    ],
+    answer: 3,
+    faultType: "limits",
+    explanation: {
+      en: "The wiper goes to digital pin 3, which cannot measure voltage. analogRead(3) reads A3 instead, and A3 has nothing on it, so the values wander. Move the wire to A3 (or to A0 and write analogRead(A0)).",
+      kk: "Ортаңғы аяқ кернеуді өлшей алмайтын 3-сандық пинге қосылған. analogRead(3) оның орнына A3-ті оқиды, ал A3-ке ештеңе қосылмаған, сондықтан мәндер өзгеріп тұрады. Сымды A3-ке ауыстыр (немесе A0-ге қосып, analogRead(A0) деп жаз).",
+      ru: "Средняя ножка идёт на цифровой пин 3, который не умеет измерять напряжение. analogRead(3) вместо этого читает A3, а к A3 ничего не подключено, поэтому значения блуждают. Переставь провод на A3 (или на A0 и напиши analogRead(A0)).",
+    },
+  },
+  {
+    id: "battery-reversed",
+    lesson: "power",
+    title: {
+      en: "Plus where minus should be",
+      kk: "Минустың орнындағы плюс",
+      ru: "Плюс на месте минуса",
+    },
+    primer: {
+      en: "A battery has a direction. Its plus must go to the board's Vin and its minus to GND. The round power jack is protected against a reversed battery; the Vin pin is not, so a mistake there reaches the board's electronics directly.",
+      kk: "Батареяның бағыты бар. Оның плюсі платаның Vin пиніне, минусы GND-ға қосылуы керек. Дөңгелек қорек ұясы теріс қосылған батареядан қорғалған; Vin пині қорғалмаған, сондықтан ондағы қате тікелей платаның электроникасына жетеді.",
+      ru: "У батарейки есть направление. Её плюс должен идти на Vin платы, а минус — на GND. Круглый разъём питания защищён от перевёрнутой батарейки; пин Vin — нет, поэтому ошибка там доходит прямо до электроники платы.",
+    },
+    goal: batteryGoal,
+    diagram: {
+      pins: ["Vin", "GND"],
+      parts: [
+        {
+          id: "bat",
+          kind: "chip",
+          title: { en: "Battery 9 V", kk: "Батарея 9 В", ru: "Батарея 9 В" },
+          x: 330,
+          y: 102,
+          left: ["+", "−"],
+        },
+      ],
+      wires: [
+        ["uno.Vin", "bat.−"],
+        ["uno.GND", "bat.+"],
+      ],
+    },
+    wiring: [
+      { from: batteryMinus, to: same("Vin") },
+      { from: batteryPlus, to: same("GND") },
+    ],
+    code: "",
+    symptom: {
+      en: "The board does not switch on, and a part near the power pins becomes very hot.",
+      kk: "Плата қосылмайды, ал қорек пиндерінің жанындағы бір бөлшек қатты қызады.",
+      ru: "Плата не включается, а деталь рядом с пинами питания сильно нагревается.",
+    },
+    options: [
+      { en: "9 V is too much for Vin", kk: "9 В Vin үшін тым көп", ru: "9 В — слишком много для Vin" },
+      {
+        en: "The battery is connected backwards: minus on Vin and plus on GND",
+        kk: "Батарея теріс қосылған: минусы Vin-де, плюсі GND-да",
+        ru: "Батарейка подключена наоборот: минус на Vin, плюс на GND",
+      },
+      {
+        en: "The board cannot work without USB",
+        kk: "Плата USB-сіз жұмыс істей алмайды",
+        ru: "Плата не может работать без USB",
+      },
+      {
+        en: "A 9 V battery is too weak for the board",
+        kk: "9 В батарея плата үшін тым әлсіз",
+        ru: "Батарейка 9 В слишком слабая для платы",
+      },
+    ],
+    answer: 1,
+    faultType: "power",
+    explanation: {
+      en: "Follow the two wires: Vin goes to the battery's minus and GND to its plus. The voltage is the right size but the wrong direction, and the Vin pin has no protection against that. Swap the two wires. 9 V on Vin is fine: the regulator is made for 7 to 12 V.",
+      kk: "Екі сымды қадағала: Vin батареяның минусына, ал GND плюсіне барады. Кернеудің шамасы дұрыс, бірақ бағыты қате, ал Vin пинінде бұдан қорғаныс жоқ. Екі сымның орнын ауыстыр. Vin-дегі 9 В қалыпты: тұрақтандырғыш 7–12 В-қа есептелген.",
+      ru: "Проследи два провода: Vin идёт к минусу батарейки, а GND — к плюсу. Величина напряжения правильная, а направление нет, и у пина Vin нет от этого защиты. Поменяй два провода местами. 9 В на Vin — это нормально: стабилизатор рассчитан на 7–12 В.",
+    },
+  },
+  {
+    id: "servo-on-3v3",
+    lesson: "power",
+    title: { en: "The weak outlet", kk: "Әлсіз розетка", ru: "Слабая розетка" },
+    primer: {
+      en: "The Uno has two power outputs. The 5V pin can give about half an amp. The 3.3V pin is meant for small sensors and gives only about 50 mA at a lower voltage. A motor of any kind needs far more than that.",
+      kk: "Uno-да екі қорек шығысы бар. 5V пині шамамен жарты ампер бере алады. 3.3V пині кішкентай датчиктерге арналған және төменірек кернеуде бар болғаны шамамен 50 мА береді. Кез келген моторға бұдан әлдеқайда көп керек.",
+      ru: "У Uno два выхода питания. Пин 5V может отдать примерно пол-ампера. Пин 3.3V предназначен для маленьких датчиков и даёт всего около 50 мА при меньшем напряжении. Любому мотору нужно намного больше.",
+    },
+    goal: sweepGoal,
+    diagram: {
+      pins: ["3.3V", "9", "GND"],
+      parts: [
+        {
+          id: "servo",
+          kind: "chip",
+          title: smallServoTitle,
+          x: 330,
+          y: 76,
+          left: ["V+", "Signal", "GND"],
+        },
+      ],
+      wires: [
+        ["uno.3.3V", "servo.V+"],
+        ["uno.9", "servo.Signal"],
+        ["servo.GND", "GND"],
+        ["uno.GND", "GND"],
+      ],
+    },
+    wiring: [
+      { from: servoV, to: same("3.3V") },
+      { from: servoSignal, to: pin("9") },
+      { from: servoGnd, to: same("GND") },
+    ],
+    code: sweepCode,
+    symptom: {
+      en: "The servo twitches weakly and never completes a turn.",
+      kk: "Серво әлсіз дірілдейді және бұрылысты аяғына дейін жеткізбейді.",
+      ru: "Серво слабо подёргивается и не доводит поворот до конца.",
+    },
+    options: [
+      {
+        en: "Pin 9 is the wrong pin for a servo signal",
+        kk: "9-пин серво сигналына жарамайды",
+        ru: "Пин 9 не подходит для сигнала серво",
+      },
+      {
+        en: "The servo's plus is on the 3.3V pin, which is too weak for a motor",
+        kk: "Сервоның плюсі мотор үшін тым әлсіз 3.3V пиніне қосылған",
+        ru: "Плюс серво подключён к пину 3.3V, который слишком слаб для мотора",
+      },
+      {
+        en: "delay(1000) is too short for a servo",
+        kk: "delay(1000) серво үшін тым қысқа",
+        ru: "delay(1000) слишком короткая для серво",
+      },
+      {
+        en: "A servo cannot turn to 180°",
+        kk: "Серво 180°-қа бұрыла алмайды",
+        ru: "Серво не может повернуться на 180°",
+      },
+    ],
+    answer: 1,
+    faultType: "power",
+    explanation: {
+      en: "The servo's V+ is on the 3.3V pin: too little voltage and about a tenth of the current a small servo needs. Move V+ to the 5V pin for a small servo, or to a separate 5–6 V supply for a large one.",
+      kk: "Сервоның V+ контактісі 3.3V пиніне қосылған: кернеу тым аз, ал ток кішкентай сервоға қажеттінің шамамен оннан бір бөлігі ғана. Кішкентай серво үшін V+ контактісін 5V пиніне, үлкен серво үшін бөлек 5–6 В қорек көзіне ауыстыр.",
+      ru: "Контакт V+ серво стоит на пине 3.3V: напряжения слишком мало, а тока — примерно десятая часть того, что нужно маленькому серво. Переставь V+ на пин 5V для маленького серво или на отдельный источник 5–6 В для большого.",
+    },
+  },
+  {
+    id: "two-rates",
+    lesson: "timing",
+    title: {
+      en: "Two LEDs taking turns",
+      kk: "Кезектесіп жанатын екі жарықдиод",
+      ru: "Два светодиода по очереди",
+    },
+    primer: {
+      en: "Commands with delay() run strictly one after another. While the board waits for one LED, it cannot switch the other. Two things with different rhythms cannot both be written with delay(); each needs its own clock check with millis().",
+      kk: "delay() бар командалар қатаң түрде бірінен соң бірі орындалады. Плата бір жарықдиодты күтіп тұрғанда, екіншісін қосып-өшіре алмайды. Ырғағы әртүрлі екі нәрсені delay() арқылы қатар жазу мүмкін емес; әрқайсысына millis() арқылы өз уақыт тексерісі керек.",
+      ru: "Команды с delay() выполняются строго одна за другой. Пока плата ждёт из-за одного светодиода, она не может переключить другой. Две вещи с разным ритмом нельзя обе написать через delay(); каждой нужна своя проверка времени через millis().",
+    },
+    goal: {
+      en: "One LED blinks fast, five times a second, while the other blinks slowly, once every two seconds, both at the same time.",
+      kk: "Бір жарықдиод жылдам, секундына бес рет, ал екіншісі баяу, екі секундта бір рет жыпылықтайды — екеуі бір уақытта.",
+      ru: "Один светодиод мигает быстро, пять раз в секунду, а другой медленно, раз в две секунды, — оба одновременно.",
+    },
+    diagram: twoLedCircuit,
+    wiring: twoLedWiring,
+    code: `void setup() {
+  pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(8, HIGH);
+  delay(100);
+  digitalWrite(8, LOW);
+  delay(100);
+
+  digitalWrite(9, HIGH);
+  delay(1000);
+  digitalWrite(9, LOW);
+  delay(1000);
+}`,
+    symptom: {
+      en: "The fast LED flashes once, then stays dark for two seconds while the slow one takes its turn. They never blink at the same time.",
+      kk: "Жылдам жарықдиод бір рет жарқ етеді, сосын баяуы өз кезегін атқарғанша екі секунд сөніп тұрады. Олар ешқашан бір уақытта жыпылықтамайды.",
+      ru: "Быстрый светодиод вспыхивает один раз, затем две секунды не горит, пока свою очередь отрабатывает медленный. Одновременно они не мигают никогда.",
+    },
+    options: [
+      {
+        en: "The board can only drive one LED at a time",
+        kk: "Плата бір уақытта тек бір жарықдиодты басқара алады",
+        ru: "Плата может управлять только одним светодиодом одновременно",
+      },
+      {
+        en: "Pins 8 and 9 share a timer",
+        kk: "8 және 9-пиндер бір таймерді бөліседі",
+        ru: "Пины 8 и 9 делят один таймер",
+      },
+      {
+        en: "The delays run one after another, so each LED waits for the other",
+        kk: "delay-лер бірінен соң бірі орындалады, сондықтан әр жарықдиод екіншісін күтеді",
+        ru: "Задержки выполняются одна за другой, и каждый светодиод ждёт другого",
+      },
+      {
+        en: "The fast delays are too short to see",
+        kk: "Жылдам delay-лер көруге тым қысқа",
+        ru: "Быстрые задержки слишком короткие, чтобы их увидеть",
+      },
+    ],
+    answer: 2,
+    faultType: "code",
+    explanation: {
+      en: "One pass of loop() takes 2.2 seconds, and the fast LED gets only the first 0.2 of them. For two independent rhythms, remove the delays and give each LED its own \"last changed\" time checked with millis().",
+      kk: "loop()-тың бір айналымы 2,2 секундқа созылады, ал жылдам жарықдиодқа соның алғашқы 0,2 секунды ғана тиеді. Екі тәуелсіз ырғақ үшін delay-лерді алып тастап, әр жарықдиодқа millis() арқылы тексерілетін өз «соңғы ауысу» уақытын бер.",
+      ru: "Один проход loop() длится 2,2 секунды, и быстрому светодиоду достаются только первые 0,2 из них. Для двух независимых ритмов убери задержки и заведи каждому светодиоду своё время «последнего переключения», которое проверяется через millis().",
+    },
+  },
+  {
+    id: "minute-overflow",
+    lesson: "code-traps",
+    title: {
+      en: "The minute that lasts for weeks",
+      kk: "Апталарға созылған минут",
+      ru: "Минута длиной в недели",
+    },
+    primer: {
+      en: "On the Uno, arithmetic with plain whole numbers is done in int, which holds at most 32 767. 60 * 1000 is 60 000: it does not fit, wraps around and becomes a negative number. Writing 60 * 1000L, or 60000L, tells the computer to calculate in long instead.",
+      kk: "Uno-да жай бүтін сандармен есептеу int түрінде орындалады, ал ол ең көп дегенде 32 767 сақтай алады. 60 * 1000 — 60 000: ол сыймайды, «аударылып», теріс санға айналады. 60 * 1000L немесе 60000L деп жазу компьютерге есептеуді long түрінде жүргізуді айтады.",
+      ru: "На Uno арифметика с обычными целыми числами выполняется в типе int, который вмещает максимум 32 767. 60 * 1000 — это 60 000: число не помещается, «переворачивается» и становится отрицательным. Запись 60 * 1000L или 60000L велит компьютеру считать в long.",
+    },
+    goal: {
+      en: "The LED switches on for a minute, then off for a minute.",
+      kk: "Жарықдиод бір минут жанады, сосын бір минут сөнеді.",
+      ru: "Светодиод на минуту включается, затем на минуту выключается.",
+    },
+    diagram: ledCircuit("8"),
+    wiring: ledWiring("8"),
+    code: `void setup() {
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(8, HIGH);
+  delay(60 * 1000);
+  digitalWrite(8, LOW);
+  delay(60 * 1000);
+}`,
+    symptom: {
+      en: "The LED switches on and then stays on for hours. It never goes off.",
+      kk: "Жарықдиод қосылады да, сағаттар бойы жанып тұрады. Ол мүлдем сөнбейді.",
+      ru: "Светодиод включается и горит часами. Он не выключается.",
+    },
+    options: [
+      {
+        en: "60 * 1000 does not fit in an int and turns into a huge wrong number",
+        kk: "60 * 1000 int-ке сыймайды да, орасан үлкен қате санға айналады",
+        ru: "60 * 1000 не помещается в int и превращается в огромное неверное число",
+      },
+      {
+        en: "delay() cannot wait longer than 30 seconds",
+        kk: "delay() 30 секундтан ұзақ күте алмайды",
+        ru: "delay() не может ждать дольше 30 секунд",
+      },
+      {
+        en: "The LED overheats and sticks on",
+        kk: "Жарықдиод қызып, қосулы күйде қалып қояды",
+        ru: "Светодиод перегревается и остаётся включённым",
+      },
+      oNotOutput,
+    ],
+    answer: 0,
+    faultType: "code",
+    explanation: {
+      en: "60 * 1000 overflows int and becomes −5536. delay() reads that as an enormous positive number and waits about seven weeks. Write delay(60000L) or delay(60 * 1000L).",
+      kk: "60 * 1000 int-ке сыймай, −5536-ға айналады. delay() оны орасан үлкен оң сан ретінде оқып, шамамен жеті апта күтеді. delay(60000L) немесе delay(60 * 1000L) деп жаз.",
+      ru: "60 * 1000 переполняет int и превращается в −5536. delay() читает это как огромное положительное число и ждёт около семи недель. Напиши delay(60000L) или delay(60 * 1000L).",
+    },
+  },
+  {
+    id: "count-resets",
+    lesson: "code-traps",
+    title: { en: "The counter that forgets", kk: "Ұмытшақ санауыш", ru: "Счётчик, который всё забывает" },
+    primer: {
+      en: "A variable declared inside loop() is created anew on every pass and thrown away at the end of it. To keep a value from one pass to the next, declare the variable outside, above setup().",
+      kk: "loop() ішінде жарияланған айнымалы әр айналымда жаңадан жасалып, айналымның соңында жойылады. Мәнді бір айналымнан келесісіне сақтау үшін айнымалыны сыртта, setup()-тың үстінде жарияла.",
+      ru: "Переменная, объявленная внутри loop(), создаётся заново на каждом проходе и уничтожается в его конце. Чтобы значение сохранялось от прохода к проходу, объяви переменную снаружи, над setup().",
+    },
+    goal: {
+      en: "Every press of the button adds 1 to the count in the Serial Monitor.",
+      kk: "Батырманың әр басылуы Serial Monitor-дағы санға 1 қосады.",
+      ru: "Каждое нажатие кнопки прибавляет 1 к счёту в Serial Monitor.",
+    },
+    diagram: buttonOnlyCircuit,
+    wiring: buttonOnlyWiring,
+    code: `void setup() {
+  Serial.begin(9600);
+  pinMode(2, INPUT_PULLUP);
+}
+
+void loop() {
+  int count = 0;
+  if (digitalRead(2) == LOW) {
+    count++;
+    Serial.println(count);
+    delay(300);
+  }
+}`,
+    symptom: {
+      en: "Every press prints 1. The count never reaches 2.",
+      kk: "Әр басу 1 деп шығарады. Санақ ешқашан 2-ге жетпейді.",
+      ru: "Каждое нажатие печатает 1. Счёт никогда не доходит до 2.",
+    },
+    options: [
+      { en: "The contacts bounce", kk: "Контактілер ыршиды", ru: "Контакты дребезжат" },
+      {
+        en: "count is declared inside loop(), so it starts from 0 on every pass",
+        kk: "count loop() ішінде жарияланған, сондықтан әр айналымда 0-ден басталады",
+        ru: "count объявлена внутри loop(), поэтому на каждом проходе начинается с 0",
+      },
+      {
+        en: "count++ adds nothing to an int",
+        kk: "count++ int-ке ештеңе қоспайды",
+        ru: "count++ ничего не прибавляет к int",
+      },
+      {
+        en: "delay(300) erases the variable",
+        kk: "delay(300) айнымалыны өшіреді",
+        ru: "delay(300) стирает переменную",
+      },
+    ],
+    answer: 1,
+    faultType: "code",
+    explanation: {
+      en: "int count = 0; is the first line of loop(), so the counter is reset to 0 on every pass and can only ever become 1. Move that line above setup().",
+      kk: "int count = 0; — loop()-тың бірінші жолы, сондықтан санауыш әр айналымда 0-ге қайтарылады да, тек 1 ғана бола алады. Сол жолды setup()-тың үстіне көшір.",
+      ru: "int count = 0; — первая строка loop(), поэтому счётчик на каждом проходе сбрасывается в 0 и может стать только 1. Перенеси эту строку выше setup().",
+    },
+  },
+  {
+    id: "pins-swapped-in-code",
+    lesson: "debugging",
+    title: {
+      en: "Right numbers, wrong names",
+      kk: "Сандар дұрыс, атаулар қате",
+      ru: "Числа верные, имена перепутаны",
+    },
+    primer: {
+      en: "Named constants such as buttonPin and ledPin make code easier to read, but they are only as true as the numbers given to them. Check each name against the diagram: which part is really on that pin?",
+      kk: "buttonPin және ledPin сияқты атаулы тұрақтылар кодты оқуды жеңілдетеді, бірақ олар өздеріне берілген сандар қаншалықты дұрыс болса, соншалықты ғана дұрыс. Әр атауды сызбамен салыстыр: сол пинде шын мәнінде қай бөлшек тұр?",
+      ru: "Именованные константы вроде buttonPin и ledPin делают код понятнее, но они верны ровно настолько, насколько верны присвоенные им числа. Сверь каждое имя со схемой: какая деталь на самом деле стоит на этом пине?",
+    },
+    goal: buttonGoal,
+    diagram: pullupButtonCircuit,
+    wiring: pullupButtonWiring,
+    code: `const int buttonPin = 8;
+const int ledPin = 2;
+
+void setup() {
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  if (digitalRead(buttonPin) == LOW) {
+    digitalWrite(ledPin, HIGH);
+  } else {
+    digitalWrite(ledPin, LOW);
+  }
+}`,
+    symptom: {
+      en: "The LED glows very faintly all the time and does not react to the button.",
+      kk: "Жарықдиод үнемі өте әлсіз жанып тұрады және батырмаға жауап бермейді.",
+      ru: "Светодиод всё время еле заметно светится и не реагирует на кнопку.",
+    },
+    options: [
+      optLedBackwards,
+      {
+        en: "The numbers for buttonPin and ledPin are swapped: the button is on 2 and the LED on 8",
+        kk: "buttonPin мен ledPin сандарының орны ауысқан: батырма 2-пинде, жарықдиод 8-пинде тұр",
+        ru: "Числа у buttonPin и ledPin перепутаны: кнопка стоит на 2, а светодиод на 8",
+      },
+      oButtonResistor,
+      {
+        en: "INPUT_PULLUP does not work with constants",
+        kk: "INPUT_PULLUP тұрақтылармен жұмыс істемейді",
+        ru: "INPUT_PULLUP не работает с константами",
+      },
+    ],
+    answer: 1,
+    faultType: "code",
+    explanation: {
+      en: "On the diagram the button is on pin 2 and the LED on pin 8, but the code says buttonPin = 8 and ledPin = 2. So the LED's pin is treated as an input, whose weak pull-up makes it glow faintly, and the button is never read. Swap the two numbers.",
+      kk: "Сызбада батырма 2-пинде, жарықдиод 8-пинде тұр, ал кодта buttonPin = 8 және ledPin = 2 деп жазылған. Сондықтан жарықдиодтың пині кіріс ретінде қолданылады — оның әлсіз pull-up резисторы жарықдиодты әрең жандырады, ал батырма мүлдем оқылмайды. Екі санның орнын ауыстыр.",
+      ru: "На схеме кнопка стоит на пине 2, а светодиод на пине 8, но в коде написано buttonPin = 8 и ledPin = 2. Поэтому пин светодиода используется как вход — его слабая подтяжка заставляет светодиод еле светиться, — а кнопка вообще не читается. Поменяй два числа местами.",
+    },
+  },
+  {
+    id: "copy-paste-else",
+    lesson: "debugging",
+    title: {
+      en: "Copied, pasted, forgotten",
+      kk: "Көшірілді, қойылды, ұмытылды",
+      ru: "Скопировано, вставлено, забыто",
+    },
+    primer: {
+      en: "When two branches of an if look almost alike, it is tempting to copy one and change a word. If the word is not changed, both branches do the same thing and the condition no longer matters. Read both branches and ask what is different between them.",
+      kk: "if-тің екі тармағы бір-біріне өте ұқсас болса, біреуін көшіріп, бір сөзін өзгерту оңай көрінеді. Сол сөз өзгертілмесе, екі тармақ та бірдей нәрсе істейді де, шарттың мәні қалмайды. Екі тармақты да оқып, араларындағы айырмашылық неде екенін сұра.",
+      ru: "Когда две ветки if почти одинаковы, хочется скопировать одну и поменять слово. Если слово не поменять, обе ветки делают одно и то же, и условие перестаёт что-либо значить. Прочитай обе ветки и спроси себя, чем они различаются.",
+    },
+    goal: buttonGoal,
+    diagram: pullupButtonCircuit,
+    wiring: pullupButtonWiring,
+    code: `void setup() {
+  pinMode(2, INPUT_PULLUP);
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  if (digitalRead(2) == LOW) {
+    digitalWrite(8, HIGH);
+  } else {
+    digitalWrite(8, HIGH);
+  }
+}`,
+    symptom: alwaysOn,
+    options: [
+      {
+        en: "With INPUT_PULLUP a pressed button reads HIGH",
+        kk: "INPUT_PULLUP кезінде басылған батырма HIGH болып оқылады",
+        ru: "С INPUT_PULLUP нажатая кнопка читается как HIGH",
+      },
+      { en: "The button is shorted", kk: "Батырма тұйықталған", ru: "Кнопка закорочена" },
+      optLedBackwards,
+      {
+        en: "Both branches write HIGH, so the LED can never be switched off",
+        kk: "Екі тармақ та HIGH жазады, сондықтан жарықдиод ешқашан өшпейді",
+        ru: "Обе ветки записывают HIGH, поэтому светодиод никогда не выключается",
+      },
+    ],
+    answer: 3,
+    faultType: "code",
+    explanation: {
+      en: "The if branch and the else branch both say digitalWrite(8, HIGH). Whatever the button does, the LED is switched on. Change the second one to digitalWrite(8, LOW).",
+      kk: "if тармағында да, else тармағында да digitalWrite(8, HIGH) деп жазылған. Батырма не істесе де, жарықдиод қосылады. Екіншісін digitalWrite(8, LOW) деп өзгерт.",
+      ru: "И в ветке if, и в ветке else написано digitalWrite(8, HIGH). Что бы ни делала кнопка, светодиод включается. Замени второй вызов на digitalWrite(8, LOW).",
+    },
+  },
 ];
+
+// A correctly built LED circuit, for the lesson on breadboards.
+export const breadboardExample: Board = {
+  rows: 14,
+  items: [
+    { kind: "lead", at: "3a", label: "Pin 8" },
+    { kind: "resistor", from: "3c", to: "7c", label: "220 Ω" },
+    { kind: "led", long: "7e", short: "9e" },
+    { kind: "lead", at: "9a", label: "GND" },
+  ],
+};
 
 // A complete, working battery circuit: the illustration for the lesson on closed loops.
 export const closedLoopExample: Diagram = batteryCircuit(
@@ -2629,29 +5985,109 @@ export const closedLoopExample: Diagram = batteryCircuit(
 
 // The order missions are played in; a mission's level is its group here.
 const LEVELS: string[][] = [
-  ["open-loop", "short-wire", "low-voltage", "no-resistor-9v"],
+  // 1. Electricity from zero
+  [
+    "open-loop",
+    "gap-in-the-middle",
+    "short-wire",
+    "led-backwards-battery",
+    "low-voltage",
+    "blue-on-3v",
+    "dim-on-battery",
+    "too-bright-9v",
+    "no-resistor-9v",
+  ],
+  // 2. Meet the Arduino
   [
     "wrong-pin",
     "no-ground",
+    "both-ends-gnd",
+    "gnd-to-5v",
+    "led-on-5v",
+    "second-led-forgotten",
     "missing-semicolon",
+    "missing-brace",
+    "wrong-capital",
     "setup-once",
     "no-second-delay",
+    "delay-units",
     "led-backwards",
     "missing-pinmode",
+    "pinmode-other-pin",
   ],
-  ["resistor-too-large", "floating-button", "pullup-inverted", "no-pwm-pin", "leds-in-series"],
+  // 3. LEDs and buttons
+  [
+    "resistor-too-large",
+    "resistor-too-small",
+    "leds-in-series",
+    "active-low-led",
+    "floating-button",
+    "pullup-inverted",
+    "button-to-5v",
+    "button-no-pullup",
+    "button-wrong-pin",
+    "button-read-once",
+    "button-short",
+    "no-pwm-pin",
+    "pwm-percent",
+    "fade-no-delay",
+  ],
+  // 4. On the breadboard
+  ["bb-same-row", "bb-one-off", "bb-split-rail", "bb-resistor-bypassed", "bb-across-gap"],
+  // 5. Knobs and sensors
   [
     "pot-no-5v",
+    "pot-both-5v",
+    "pot-wrong-pin",
+    "pot-on-3v3",
+    "analog-read-digital-pin",
     "digital-read-analog",
     "analogwrite-overflow",
     "ldr-no-divider",
-    "baud-mismatch",
+    "threshold-reversed",
     "sonar-swapped",
-    "i2c-swapped",
-    "button-short",
+    "sonar-no-gnd",
+    "sonar-no-trig",
   ],
-  ["motor-on-pin", "servo-brownout", "no-common-ground"],
-  ["delay-blocks", "millis-int", "assign-in-if", "int-division", "button-bounce", "serial-pins"],
+  // 6. Serial and modules
+  [
+    "serial-no-begin",
+    "print-no-newline",
+    "serial-quotes",
+    "serial-write",
+    "baud-mismatch",
+    "led-on-tx",
+    "i2c-swapped",
+    "servo-wrong-pin",
+    "servo-no-signal",
+  ],
+  // 7. Power
+  [
+    "motor-on-pin",
+    "servo-brownout",
+    "servo-on-3v3",
+    "no-common-ground",
+    "battery-on-5v-pin",
+    "battery-reversed",
+  ],
+  // 8. Hidden traps
+  [
+    "delay-blocks",
+    "two-rates",
+    "millis-int",
+    "millis-no-update",
+    "assign-in-if",
+    "semicolon-after-if",
+    "int-division",
+    "minute-overflow",
+    "count-resets",
+    "copy-paste-else",
+    "pins-swapped-in-code",
+    "button-bounce",
+    "toggle-held",
+    "servo-kills-pwm",
+    "serial-pins",
+  ],
 ];
 
 export const missions: Mission[] = LEVELS.flatMap((ids, i) =>

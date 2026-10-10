@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { Breadboard } from "@/components/Breadboard";
 import { Diagram } from "@/components/Diagram";
-import { DEMO, highlights, optionOrder, sources, verifiedOnHardware } from "@/lib/extras";
+import {
+  DEMO,
+  highlights,
+  nextOpening,
+  optionOrder,
+  sources,
+  verifiedOnHardware,
+} from "@/lib/extras";
 import { termsIn } from "@/lib/glossary";
 import { lessons } from "@/lib/lessons";
 import { missions } from "@/lib/missions";
@@ -15,13 +23,19 @@ const DONT_KNOW = -1;
 
 // demo is the 1-based step when the mission is shown as part of the three-minute tour.
 export function MissionView({ index, demo }: { index: number; demo?: number }) {
-  const { lang, attempts, primerOpen, seed, ready } = useAppState();
+  const { lang, attempts, primerOpen, seed, loadedAt, ready } = useAppState();
   const t = ui[lang];
   const mission = missions[index];
   const attempt = attempts[mission.id];
   const lesson = lessons.find((l) => l.slug === mission.lesson);
   const source = sources[mission.id];
-  const order = optionOrder(mission.id, mission.options.length, seed);
+  // A new order of options on every opening of the mission and every practice run.
+  const [opening, setOpening] = useState(nextOpening);
+  const order = optionOrder(
+    mission.id,
+    mission.options.length,
+    ready ? seed + loadedAt + opening * 7919 : 0,
+  );
 
   const [picked, setPicked] = useState<number | null>(null);
   // A practice run after the first answer: played locally, never recorded.
@@ -136,22 +150,15 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
         </span>
       </div>
 
-      <div className="mt-5 flex items-start gap-4">
-        <span className="outline-num text-5xl sm:text-6xl">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <div>
-          <h1 className="font-display text-2xl leading-tight font-bold text-balance sm:text-3xl">
-            {mission.title[lang]}
-          </h1>
-          <p className="mt-1.5 text-sm text-mute">
-            {mission.diagram.pins.length ? t.board : t.noBoard}
-            {verifiedOnHardware.has(mission.id) && (
-              <span className="ml-2 font-medium text-good">✓ {t.verified}</span>
-            )}
-          </p>
-        </div>
-      </div>
+      <h1 className="mt-5 font-display text-2xl leading-tight font-bold text-balance sm:text-3xl">
+        {mission.title[lang]}
+      </h1>
+      <p className="mt-1.5 text-sm text-mute">
+        {mission.diagram.pins.length ? t.board : t.noBoard}
+        {verifiedOnHardware.has(mission.id) && (
+          <span className="ml-2 font-medium text-good">✓ {t.verified}</span>
+        )}
+      </p>
 
       <div className="mt-7 grid gap-4 md:grid-cols-2">
         <section className="card px-5 py-4">
@@ -205,7 +212,16 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
         </div>
       )}
 
-      <Section title={t.circuit}>
+      {mission.board && (
+        <Section title={t.boardTitle}>
+          <div className="pop overflow-x-auto">
+            <Breadboard board={mission.board} highlight={highlight?.holes} label={t.boardTitle} />
+          </div>
+          <p className="mt-2 text-sm text-mute">{t.boardHint}</p>
+        </Section>
+      )}
+
+      <Section title={mission.board ? t.planTitle : t.circuit}>
         <div className="pop overflow-x-auto">
           <Diagram
             diagram={mission.diagram}
@@ -335,7 +351,10 @@ export function MissionView({ index, demo }: { index: number; demo?: number }) {
                 </Link>
               )}
               <button
-                onClick={() => setPractice({ picked: null, checked: false })}
+                onClick={() => {
+                  setPractice({ picked: null, checked: false });
+                  setOpening(nextOpening());
+                }}
                 className="btn"
               >
                 {t.tryAgain}
