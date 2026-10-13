@@ -195,6 +195,17 @@ summary {
     color: var(--accent-ink);
   }
 
+  /* A long group of tickets on the home page. The browser skips laying out and painting
+     groups that are off screen, which matters on a slow phone with 135 tickets. Skipped
+     content is clipped to the box, so the padding leaves room for the tickets' shadows. */
+  .ticket-group {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 40rem;
+    margin-inline: -0.5rem;
+    padding-inline: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
   /* A mission or lesson in a list: a repair ticket with a numbered stub. */
   .ticket {
     display: flex;

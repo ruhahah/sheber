@@ -1,0 +1,16 @@
+# Render blueprint: Render reads this file and creates the service with these settings.
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: sheber
+    runtime: node
+    plan: free
+    region: frankfurt
+    # --include=dev: the build needs TypeScript and Tailwind, which are devDependencies.
+    buildCommand: npm ci --include=dev && npm run build
+    # next start listens on the PORT that Render provides.
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0

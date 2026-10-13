@@ -85,7 +85,7 @@ export default function Home() {
       </section>
 
       {levelsOf(catalog).map((level) => (
-        <section key={level} className="mt-14">
+        <section key={level} className="ticket-group mt-14">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b-[1.5px] border-edge pb-3">
             <h2 className="font-display text-xl font-bold">{levelTitle(level, lang)}</h2>
             {level >= ADVANCED_FROM && <span className="stamp mb-1 text-mute">{t.advanced}</span>}

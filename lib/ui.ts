@@ -1,4 +1,4 @@
-import type { FaultType, Lang, Text } from "./types";
+import type { FaultType, Lang, ReportKind, Text } from "./types";
 
 const en = {
   navMissions: "Missions",
@@ -127,6 +127,15 @@ const en = {
   teacherEmpty: "No results recognised yet.",
   testers: "Testers: {n}",
   avgFound: "Faults found on average",
+  reportOpen: "Report a problem with this mission",
+  reportQuestion: "What is wrong here?",
+  reportPlaceholder: "A few words about it (optional)",
+  reportSave: "Save the report",
+  reportCancel: "Cancel",
+  reportSaved: "Report saved. It is sent together with your results.",
+  reportDelete: "Delete the report",
+  reportsTitle: "Reported problems",
+  reportsNone: "Nobody has reported a problem.",
   avgShort: "Avg time",
 
   notFoundTitle: "Nothing here",
@@ -307,6 +316,15 @@ const kk: Dict = {
   teacherEmpty: "Әзірге нәтиже танылмады.",
   testers: "Тестілеушілер: {n}",
   avgFound: "Орта есеппен табылған ақаулар",
+  reportOpen: "Осы миссиядағы қате туралы хабарлау",
+  reportQuestion: "Мұнда не дұрыс емес?",
+  reportPlaceholder: "Бірнеше сөзбен сипатта (міндетті емес)",
+  reportSave: "Хабарламаны сақтау",
+  reportCancel: "Бас тарту",
+  reportSaved: "Хабарлама сақталды. Ол нәтижелеріңмен бірге жіберіледі.",
+  reportDelete: "Хабарламаны өшіру",
+  reportsTitle: "Хабарланған қателер",
+  reportsNone: "Ешкім қате туралы хабарлаған жоқ.",
   avgShort: "Орт. уақыт",
 
   notFoundTitle: "Мұнда ештеңе жоқ",
@@ -485,6 +503,15 @@ const ru: Dict = {
   teacherEmpty: "Результаты пока не распознаны.",
   testers: "Тестеров: {n}",
   avgFound: "В среднем найдено поломок",
+  reportOpen: "Сообщить об ошибке в этой миссии",
+  reportQuestion: "Что здесь не так?",
+  reportPlaceholder: "Пара слов об этом (необязательно)",
+  reportSave: "Сохранить сообщение",
+  reportCancel: "Отмена",
+  reportSaved: "Сообщение сохранено. Оно отправится вместе с твоими результатами.",
+  reportDelete: "Удалить сообщение",
+  reportsTitle: "Сообщения об ошибках",
+  reportsNone: "Никто не сообщил об ошибках.",
   avgShort: "Ср. время",
 
   notFoundTitle: "Здесь ничего нет",
@@ -550,6 +577,26 @@ export const faultTypeLabel: Record<FaultType, Text> = {
   wiring: { en: "Wiring", kk: "Сымдар", ru: "Провода" },
   limits: { en: "Board limits", kk: "Плата шектеулері", ru: "Ограничения платы" },
   power: { en: "Power", kk: "Қорек", ru: "Питание" },
+};
+
+export const reportKindLabel: Record<ReportKind, Text> = {
+  text: {
+    en: "Mistake in the text or translation",
+    kk: "Мәтінде немесе аудармада қате бар",
+    ru: "Ошибка в тексте или переводе",
+  },
+  circuit: {
+    en: "The circuit or the code does not match the text",
+    kk: "Сызба немесе код мәтінге сәйкес келмейді",
+    ru: "Схема или код не совпадают с текстом",
+  },
+  answer: { en: "The answer seems wrong", kk: "Жауап қате сияқты", ru: "Ответ кажется неверным" },
+  unclear: {
+    en: "The task is hard to understand",
+    kk: "Тапсырманы түсіну қиын",
+    ru: "Задание трудно понять",
+  },
+  other: { en: "Something else", kk: "Басқа нәрсе", ru: "Другое" },
 };
 
 export function fill(template: string, values: Record<string, string | number>) {

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useCatalog } from "@/components/Catalog";
 import { aggregate, parseResults } from "@/lib/stats";
 import { useAppState } from "@/lib/store";
-import { fill, ui } from "@/lib/ui";
+import { fill, reportKindLabel, ui } from "@/lib/ui";
 
 const percent = (part: number, whole: number) => (whole ? `${(part / whole) * 100}%` : "0%");
 
@@ -85,6 +85,35 @@ export default function Teacher() {
               ),
             )}
           </ul>
+
+          <section className="mt-12">
+            <h2 className="font-display text-2xl font-bold">
+              {t.reportsTitle}{" "}
+              <span className="font-mono text-base font-normal text-mute">
+                {summary.reports.length}
+              </span>
+            </h2>
+            {summary.reports.length === 0 ? (
+              <p className="mt-3 text-mute">{t.reportsNone}</p>
+            ) : (
+              <ul className="pop mt-4 divide-y divide-line overflow-hidden">
+                {summary.reports.map((r, i) => (
+                  <li key={i} className="px-4 py-3 text-sm">
+                    <p className="font-medium">
+                      <span className="font-mono text-mute">
+                        {String(r.number).padStart(2, "0")}
+                      </span>{" "}
+                      {r.title[lang]}
+                    </p>
+                    <p className="mt-0.5 text-mute">
+                      {reportKindLabel[r.kind][lang]} · {r.lang.toUpperCase()} · {r.name}
+                    </p>
+                    {r.text && <p className="mt-1.5">{r.text}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </>
       )}
     </main>

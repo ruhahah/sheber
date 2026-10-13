@@ -89,6 +89,12 @@ export type Highlight = {
 
 export type Source = { label: string; url: string };
 
+// What a tester can say is wrong with a mission. lang is the language they were reading,
+// which matters when the problem is in one translation only.
+export const REPORT_KINDS = ["text", "circuit", "answer", "unclear", "other"] as const;
+export type ReportKind = (typeof REPORT_KINDS)[number];
+export type Report = { kind: ReportKind; text: string; lang: Lang; at: string };
+
 // What lists, progress bars and statistics need to know about a mission or a lesson: a few
 // short fields instead of the whole thing. The server sends this index to every page once.
 export type MissionInfo = Pick<Mission, "id" | "level" | "lesson" | "faultType" | "title">;

@@ -11,13 +11,14 @@ import { faultTypeLabel, fill, ui } from "@/lib/ui";
 const RING = 2 * Math.PI * 52;
 
 export default function Results() {
-  const { lang, attempts, nickname, group } = useAppState();
+  const { lang, attempts, nickname, group, reports } = useAppState();
   const t = ui[lang];
   const { missions } = useCatalog();
   const stats = summarize(missions, attempts);
   const [copied, setCopied] = useState(false);
 
-  if (stats.answered === 0) {
+  // A tester who only reported problems still has something to send.
+  if (stats.answered === 0 && Object.keys(reports).length === 0) {
     return (
       <main>
         <p className="eyebrow">{t.navResults}</p>
@@ -30,7 +31,7 @@ export default function Results() {
     );
   }
 
-  const text = resultText(missions, nickname, group, attempts);
+  const text = resultText(missions, nickname, group, attempts, reports);
 
   async function copy() {
     try {

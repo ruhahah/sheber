@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Breadboard } from "@/components/Breadboard";
 import { useCatalog } from "@/components/Catalog";
 import { Diagram } from "@/components/Diagram";
+import { ReportProblem } from "@/components/ReportProblem";
 import { termsIn } from "@/lib/glossary";
 import { nextOpening, optionOrder } from "@/lib/shuffle";
 import { markRedeemed, recordAttempt, useAppState } from "@/lib/store";
@@ -104,7 +105,9 @@ export function MissionView({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select") || e.ctrlKey || e.metaKey || e.altKey) return;
+      // Keys pressed inside a form field or the report form are not answers.
+      if (target?.closest("input, textarea, select, [data-report]")) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === "Enter") {
         // Enter on a link or button does that control's own job, except on an answer
         // option, where it confirms the choice (otherwise click-then-Enter would do nothing).
@@ -374,6 +377,8 @@ export function MissionView({
           </div>
         )}
       </Section>
+
+      <ReportProblem missionId={mission.id} />
     </main>
   );
 }

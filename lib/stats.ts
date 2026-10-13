@@ -1,5 +1,13 @@
 import type { Attempt } from "./store";
-import type { FaultType, MissionInfo } from "./types";
+import {
+  LANGS,
+  REPORT_KINDS,
+  type FaultType,
+  type Lang,
+  type MissionInfo,
+  type Report,
+  type ReportKind,
+} from "./types";
 
 // Every function here takes the mission index as its first argument (see useCatalog), so
 // this file never pulls the full mission catalog into the browser.
@@ -30,12 +38,14 @@ export function summarize(missions: MissionInfo[], attempts: Record<string, Atte
 }
 
 // Plain text a tester can paste into a chat; one line per mission: id,correct,choice,seconds.
-// choice is -1 when the tester picked "I don't know".
+// choice is -1 when the tester picked "I don't know". Problems the tester reported follow
+// as "report,id,kind,language,comment"; the comment comes last because it may hold commas.
 export function resultText(
   missions: MissionInfo[],
   nickname: string,
   group: string,
   attempts: Record<string, Attempt>,
+  reports: Record<string, Report> = {},
 ) {
   const s = summarize(missions, attempts);
   const lines = missions
@@ -44,6 +54,12 @@ export function resultText(
       const a = attempts[m.id];
       return `${m.id},${a.correct ? 1 : 0},${a.choice},${Math.round(a.ms / 1000)}`;
     });
+  const reportLines = missions
+    .filter((m) => reports[m.id])
+    .map((m) => {
+      const r = reports[m.id];
+      return `report,${m.id},${r.kind},${r.lang},${r.text.replace(/\s+/g, " ").trim()}`;
+    });
   return [
     "Sheber result",
     `name: ${nickname.trim() || "-"}`,
@@ -51,11 +67,13 @@ export function resultText(
     `score: ${s.found}/${s.total} (answered ${s.answered})`,
     `avg_seconds: ${s.avgSeconds}`,
     ...lines,
+    ...reportLines,
   ].join("\n");
 }
 
 type Row = { correct: boolean; choice: number; seconds: number };
-export type ParsedResult = { name: string; rows: Record<string, Row> };
+export type ParsedReport = { mission: string; kind: ReportKind; lang: Lang; text: string };
+export type ParsedResult = { name: string; rows: Record<string, Row>; reports: ParsedReport[] };
 
 // Reads any number of pasted resultText() blocks back, ignoring everything it doesn't know.
 export function parseResults(missions: MissionInfo[], text: string): ParsedResult[] {
@@ -66,7 +84,7 @@ export function parseResults(missions: MissionInfo[], text: string): ParsedResul
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (/^sheber result$/i.test(line)) {
-      current = { name: "-", rows: {} };
+      current = { name: "-", rows: {}, reports: [] };
       results.push(current);
       continue;
     }
@@ -85,12 +103,27 @@ export function parseResults(missions: MissionInfo[], text: string): ParsedResul
         choice: Number(row[3]),
         seconds: Number(row[4]),
       };
+      continue;
+    }
+    const report = line.match(/^report,([a-z0-9-]+),([a-z]+),([a-z]+),(.*)$/);
+    if (
+      report &&
+      known.has(report[1]) &&
+      (REPORT_KINDS as readonly string[]).includes(report[2]) &&
+      (LANGS as readonly string[]).includes(report[3])
+    ) {
+      current.reports.push({
+        mission: report[1],
+        kind: report[2] as ReportKind,
+        lang: report[3] as Lang,
+        text: report[4].trim(),
+      });
     }
   }
   // The same block pasted twice (a tester re-sent it, or it was copied twice) counts once.
   const seen = new Set<string>();
   return results.filter((r) => {
-    if (Object.keys(r.rows).length === 0) return false;
+    if (Object.keys(r.rows).length === 0 && r.reports.length === 0) return false;
     const key = JSON.stringify(r);
     if (seen.has(key)) return false;
     seen.add(key);
@@ -121,5 +154,13 @@ export function aggregate(missions: MissionInfo[], results: ParsedResult[]) {
       ? Math.round((foundPerPerson.reduce((a, b) => a + b, 0) / results.length) * 10) / 10
       : 0,
     perMission,
+    // Every reported problem, in mission order, with who sent it.
+    reports: missions.flatMap((m, index) =>
+      results.flatMap((r) =>
+        r.reports
+          .filter((x) => x.mission === m.id)
+          .map((x) => ({ ...x, name: r.name, title: m.title, number: index + 1 })),
+      ),
+    ),
   };
 }

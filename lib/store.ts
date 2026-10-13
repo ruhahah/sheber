@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { LANGS, type Lang } from "./types";
+import { LANGS, REPORT_KINDS, type Lang, type Report, type ReportKind } from "./types";
 
 export type Theme = "system" | "light" | "dark";
 export type TextSize = "normal" | "large";
@@ -30,7 +30,12 @@ export type AppState = {
   lessonsRead: Record<string, string>;
   // Missions missed at first and later solved in a practice run.
   redeemed: string[];
+  // Mission id -> what the tester found wrong with it. Sent along with the results.
+  reports: Record<string, Report>;
 };
+
+// The longest comment a report can carry.
+export const REPORT_TEXT_MAX = 300;
 
 // Also read by the inline script in app/layout.tsx.
 const STORAGE_KEY = "sheber:v1";
@@ -52,6 +57,7 @@ const initial: AppState = {
   attempts: {},
   lessonsRead: {},
   redeemed: [],
+  reports: {},
 };
 
 let state = initial;
@@ -108,6 +114,26 @@ function sanitize(input: unknown): Partial<AppState> {
   }
   if (Array.isArray(input.redeemed)) {
     out.redeemed = input.redeemed.filter((id): id is string => typeof id === "string");
+  }
+  if (isRecord(input.reports)) {
+    out.reports = {};
+    for (const [id, r] of Object.entries(input.reports)) {
+      if (
+        isRecord(r) &&
+        (REPORT_KINDS as readonly unknown[]).includes(r.kind) &&
+        (LANGS as readonly unknown[]).includes(r.lang) &&
+        typeof r.text === "string" &&
+        typeof r.at === "string" &&
+        !Number.isNaN(Date.parse(r.at))
+      ) {
+        out.reports[id] = {
+          kind: r.kind as ReportKind,
+          lang: r.lang as Lang,
+          text: r.text.slice(0, REPORT_TEXT_MAX),
+          at: r.at,
+        };
+      }
+    }
   }
   return out;
 }
@@ -189,6 +215,18 @@ export function markRedeemed(missionId: string) {
   load();
   if (state.redeemed.includes(missionId)) return;
   setState({ redeemed: [...state.redeemed, missionId] });
+}
+
+// One report per mission; saving again replaces the earlier one.
+export function saveReport(missionId: string, report: Report) {
+  load();
+  setState({ reports: { ...state.reports, [missionId]: report } });
+}
+
+export function removeReport(missionId: string) {
+  load();
+  const { [missionId]: removed, ...rest } = state.reports;
+  if (removed) setState({ reports: rest });
 }
 
 // Everything worth carrying to another device, as written by the Settings export.
