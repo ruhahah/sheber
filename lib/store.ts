@@ -1,12 +1,20 @@
 import { useSyncExternalStore } from "react";
-import { LANGS, REPORT_KINDS, type Lang, type Report, type ReportKind } from "./types";
+import {
+  LANGS,
+  REPORT_KINDS,
+  type Lang,
+  type MentorMessage,
+  type Report,
+  type ReportKind,
+} from "./types";
 
 export type Theme = "system" | "light" | "dark";
 export type TextSize = "normal" | "large";
 
 // Only the first answer to a mission is kept, so the numbers reflect a real first try.
 // choice is the option's index in the mission data, or -1 for "I don't know".
-export type Attempt = { choice: number; correct: boolean; ms: number; at: string };
+// hint is set when the visitor asked what kind of fault it is before answering.
+export type Attempt = { choice: number; correct: boolean; ms: number; at: string; hint?: boolean };
 
 export type AppState = {
   // False on the server and until localStorage has been read in the browser.
@@ -32,7 +40,18 @@ export type AppState = {
   redeemed: string[];
   // Mission id -> what the tester found wrong with it. Sent along with the results.
   reports: Record<string, Report>;
+  // Missions saved for later.
+  bookmarks: string[];
+  // Set while the visitor is playing the quick route, so "next" follows the route.
+  track: "quick" | null;
+  // Mission id -> the conversation with the AI mentor about it (only the latest few).
+  mentorChats: Record<string, MentorMessage[]>;
+  // The AI mentor is hidden, for example for a test without help.
+  mentorOff: boolean;
 };
+
+// How much of the mentor conversations is kept in the browser.
+export const MENTOR_KEEP = { messages: 12, missions: 25, text: 2400 };
 
 // The longest comment a report can carry.
 export const REPORT_TEXT_MAX = 300;
@@ -58,6 +77,10 @@ const initial: AppState = {
   lessonsRead: {},
   redeemed: [],
   reports: {},
+  bookmarks: [],
+  track: null,
+  mentorChats: {},
+  mentorOff: false,
 };
 
 let state = initial;
@@ -101,7 +124,27 @@ function sanitize(input: unknown): Partial<AppState> {
         !Number.isNaN(Date.parse(a.at))
       ) {
         out.attempts[id] = { choice: a.choice, correct: a.correct, ms: a.ms, at: a.at };
+        if (a.hint === true) out.attempts[id].hint = true;
       }
+    }
+  }
+  if (Array.isArray(input.bookmarks)) {
+    out.bookmarks = input.bookmarks.filter((id): id is string => typeof id === "string");
+  }
+  if (input.track === "quick" || input.track === null) out.track = input.track;
+  if (typeof input.mentorOff === "boolean") out.mentorOff = input.mentorOff;
+  if (isRecord(input.mentorChats)) {
+    out.mentorChats = {};
+    for (const [id, chat] of Object.entries(input.mentorChats).slice(-MENTOR_KEEP.missions)) {
+      if (!Array.isArray(chat)) continue;
+      const messages = chat
+        .filter(
+          (m): m is MentorMessage =>
+            isRecord(m) && (m.role === "user" || m.role === "assistant") && typeof m.text === "string",
+        )
+        .slice(-MENTOR_KEEP.messages)
+        .map((m) => ({ role: m.role, text: m.text.slice(0, MENTOR_KEEP.text) }));
+      if (messages.length) out.mentorChats[id] = messages;
     }
   }
   if (isRecord(input.lessonsRead)) {
@@ -215,6 +258,31 @@ export function markRedeemed(missionId: string) {
   load();
   if (state.redeemed.includes(missionId)) return;
   setState({ redeemed: [...state.redeemed, missionId] });
+}
+
+// Keeps the latest part of a mission's conversation, and conversations about the most
+// recent missions only, so the saved data stays small.
+export function saveMentorChat(missionId: string, messages: MentorMessage[]) {
+  load();
+  const { [missionId]: previous, ...others } = state.mentorChats;
+  void previous;
+  const kept = Object.entries(others).slice(-(MENTOR_KEEP.missions - 1));
+  const latest = messages
+    .slice(-MENTOR_KEEP.messages)
+    .map((m) => ({ role: m.role, text: m.text.slice(0, MENTOR_KEEP.text) }));
+  setState({
+    mentorChats: Object.fromEntries(latest.length ? [...kept, [missionId, latest]] : kept),
+  });
+}
+
+export function toggleBookmark(missionId: string) {
+  load();
+  const saved = state.bookmarks.includes(missionId);
+  setState({
+    bookmarks: saved
+      ? state.bookmarks.filter((id) => id !== missionId)
+      : [...state.bookmarks, missionId],
+  });
 }
 
 // One report per mission; saving again replaces the earlier one.

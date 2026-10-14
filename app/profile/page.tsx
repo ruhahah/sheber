@@ -232,6 +232,9 @@ export default function Profile() {
       </section>
 
       <div className="mt-10 flex flex-wrap gap-3">
+        <Link href="/certificate" className="btn btn-primary">
+          {t.certOpen} →
+        </Link>
         <Link href="/results" className="btn">
           {t.navResults} →
         </Link>

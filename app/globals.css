@@ -129,6 +129,30 @@ summary {
   cursor: pointer;
 }
 
+/* Paper is white whatever the theme on screen: print in the light colours, without the
+   grid and the offset shadows. */
+@media print {
+  :root,
+  :root[data-theme="dark"],
+  :root:not([data-theme="light"]) {
+    color-scheme: light;
+    --bg: #ffffff;
+    --grid: transparent;
+    --panel: #ffffff;
+    --sunken: #f1f1f1;
+    --line: #c8c8c8;
+    --edge: #1a1c21;
+    --drop: transparent;
+    --ink: #1a1c21;
+    --mute: #4b5160;
+    --accent: #e8590c;
+    --accent-ink: #ffffff;
+    --accent-text: #c2410c;
+    --good: #15803d;
+    --bad: #c62828;
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

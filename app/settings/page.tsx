@@ -20,7 +20,7 @@ const SIZES: TextSize[] = ["normal", "large"];
 
 export default function Settings() {
   const state = useAppState();
-  const { lang, theme, textSize, reduceMotion, nickname, primerOpen, attempts } = state;
+  const { lang, theme, textSize, reduceMotion, nickname, primerOpen, attempts, mentorOff } = state;
   const t = ui[lang];
   const themeLabel = { system: t.themeSystem, light: t.themeLight, dark: t.themeDark };
   const sizeLabel = { normal: t.sizeNormal, large: t.sizeLarge };
@@ -102,6 +102,12 @@ export default function Settings() {
           hint={t.primerOpenHint}
           checked={primerOpen}
           onChange={(v) => setState({ primerOpen: v })}
+        />
+        <Toggle
+          label={t.mentorSetting}
+          hint={t.mentorSettingHint}
+          checked={!mentorOff}
+          onChange={(v) => setState({ mentorOff: !v })}
         />
         <Row label={t.keyboard}>
           <p className="text-sm text-mute">{t.keyboardHint}</p>

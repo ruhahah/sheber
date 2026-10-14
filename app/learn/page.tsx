@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useCatalog } from "@/components/Catalog";
 import { glossary } from "@/lib/glossary";
 import { useAppState } from "@/lib/store";
-import { ui } from "@/lib/ui";
+import { fill, ui } from "@/lib/ui";
 
 export default function Learn() {
-  const { lang, lessonsRead } = useAppState();
+  const { lang, lessonsRead, attempts } = useAppState();
   const t = ui[lang];
-  const { lessons } = useCatalog();
+  const { lessons, missions } = useCatalog();
 
   return (
     <main>
@@ -18,13 +18,29 @@ export default function Learn() {
       <p className="mt-4 max-w-xl text-lg text-mute">{t.learnIntro}</p>
 
       <ol className="mt-10 grid gap-4 sm:grid-cols-2">
-        {lessons.map((lesson, i) => (
+        {lessons.map((lesson, i) => {
+          const inLesson = missions.filter((m) => m.lesson === lesson.slug);
+          const found = inLesson.filter((m) => attempts[m.id]?.correct).length;
+          return (
           <li key={lesson.slug}>
             <Link href={`/learn/${lesson.slug}`} className="ticket">
               <span className="ticket-stub">{String(i + 1).padStart(2, "0")}</span>
               <span className="flex-1 px-4 py-3.5">
                 <span className="block font-semibold">{lesson.title[lang]}</span>
                 <span className="mt-1 block text-sm text-mute">{lesson.summary[lang]}</span>
+                <span className="mt-2 flex items-center gap-2 text-xs text-mute">
+                  <span className="flex gap-0.5" aria-hidden="true">
+                    {inLesson.map((m) => (
+                      <span
+                        key={m.id}
+                        className={`h-1.5 w-4 rounded-sm ${
+                          attempts[m.id]?.correct ? "bg-good" : "bg-sunken"
+                        }`}
+                      />
+                    ))}
+                  </span>
+                  {fill(t.lessonFound, { n: found, total: inLesson.length })}
+                </span>
               </span>
               {lessonsRead[lesson.slug] && (
                 <span className="flex items-center pr-4">
@@ -33,7 +49,8 @@ export default function Learn() {
               )}
             </Link>
           </li>
-        ))}
+          );
+        })}
       </ol>
 
       <section className="mt-16">

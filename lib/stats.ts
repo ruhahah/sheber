@@ -37,8 +37,9 @@ export function summarize(missions: MissionInfo[], attempts: Record<string, Atte
   };
 }
 
-// Plain text a tester can paste into a chat; one line per mission: id,correct,choice,seconds.
-// choice is -1 when the tester picked "I don't know". Problems the tester reported follow
+// Plain text a tester can paste into a chat; one line per mission:
+// id,correct,choice,seconds,hint. choice is -1 when the tester picked "I don't know"; hint is
+// 1 when they asked for the hint before answering. Problems the tester reported follow
 // as "report,id,kind,language,comment"; the comment comes last because it may hold commas.
 export function resultText(
   missions: MissionInfo[],
@@ -52,7 +53,8 @@ export function resultText(
     .filter((m) => attempts[m.id])
     .map((m) => {
       const a = attempts[m.id];
-      return `${m.id},${a.correct ? 1 : 0},${a.choice},${Math.round(a.ms / 1000)}`;
+      const seconds = Math.round(a.ms / 1000);
+      return `${m.id},${a.correct ? 1 : 0},${a.choice},${seconds},${a.hint ? 1 : 0}`;
     });
   const reportLines = missions
     .filter((m) => reports[m.id])
@@ -71,7 +73,7 @@ export function resultText(
   ].join("\n");
 }
 
-type Row = { correct: boolean; choice: number; seconds: number };
+type Row = { correct: boolean; choice: number; seconds: number; hint: boolean };
 export type ParsedReport = { mission: string; kind: ReportKind; lang: Lang; text: string };
 export type ParsedResult = { name: string; rows: Record<string, Row>; reports: ParsedReport[] };
 
@@ -96,12 +98,14 @@ export function parseResults(missions: MissionInfo[], text: string): ParsedResul
       current.name = who[1].toLowerCase() === "name" ? who[2] || "-" : `${current.name} · ${who[2]}`;
       continue;
     }
-    const row = line.match(/^([a-z0-9-]+),([01]),(-?\d+),(\d+)$/);
+    // The fifth column (hint) is missing in results copied from older versions of the site.
+    const row = line.match(/^([a-z0-9-]+),([01]),(-?\d+),(\d+)(?:,([01]))?$/);
     if (row && known.has(row[1])) {
       current.rows[row[1]] = {
         correct: row[2] === "1",
         choice: Number(row[3]),
         seconds: Number(row[4]),
+        hint: row[5] === "1",
       };
       continue;
     }
@@ -142,6 +146,7 @@ export function aggregate(missions: MissionInfo[], results: ParsedResult[]) {
       found,
       unknown,
       missed: rows.length - found - unknown,
+      hinted: rows.filter((r) => r.hint).length,
       avgSeconds: rows.length
         ? Math.round(rows.reduce((sum, r) => sum + r.seconds, 0) / rows.length)
         : 0,
@@ -163,4 +168,54 @@ export function aggregate(missions: MissionInfo[], results: ParsedResult[]) {
       ),
     ),
   };
+}
+
+// Semicolons, not commas: that is what Excel expects with Russian and Kazakh settings, and
+// Google Sheets recognises both.
+function csv(rows: (string | number)[][]) {
+  const cell = (value: string | number) => {
+    const text = String(value);
+    return /[";\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  return rows.map((row) => row.map(cell).join(";")).join("\r\n");
+}
+
+// The class summary as a table, one row per mission.
+export function missionsCsv(summary: ReturnType<typeof aggregate>, lang: Lang) {
+  return csv([
+    ["number", "id", "title", "answered", "found", "not_sure", "missed", "with_hint", "avg_seconds"],
+    ...summary.perMission.map((p, i) => [
+      i + 1,
+      p.mission.id,
+      p.mission.title[lang],
+      p.answered,
+      p.found,
+      p.unknown,
+      p.missed,
+      p.hinted,
+      p.avgSeconds,
+    ]),
+  ]);
+}
+
+// The class summary as a table, one row per tester.
+export function peopleCsv(results: ParsedResult[]) {
+  return csv([
+    ["name", "answered", "found", "not_sure", "missed", "with_hint", "total_seconds", "reports"],
+    ...results.map((r) => {
+      const rows = Object.values(r.rows);
+      const found = rows.filter((x) => x.correct).length;
+      const unknown = rows.filter((x) => x.choice === -1).length;
+      return [
+        r.name,
+        rows.length,
+        found,
+        unknown,
+        rows.length - found - unknown,
+        rows.filter((x) => x.hint).length,
+        rows.reduce((sum, x) => sum + x.seconds, 0),
+        r.reports.length,
+      ];
+    }),
+  ]);
 }

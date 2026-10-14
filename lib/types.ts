@@ -89,6 +89,9 @@ export type Highlight = {
 
 export type Source = { label: string; url: string };
 
+// One turn of a conversation with the AI mentor.
+export type MentorMessage = { role: "user" | "assistant"; text: string };
+
 // What a tester can say is wrong with a mission. lang is the language they were reading,
 // which matters when the problem is in one translation only.
 export const REPORT_KINDS = ["text", "circuit", "answer", "unclear", "other"] as const;

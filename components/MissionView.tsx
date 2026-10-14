@@ -5,12 +5,21 @@ import { useEffect, useRef, useState } from "react";
 import { Breadboard } from "@/components/Breadboard";
 import { useCatalog } from "@/components/Catalog";
 import { Diagram } from "@/components/Diagram";
+import { Icon } from "@/components/Icon";
+import { MentorPanel } from "@/components/MentorPanel";
 import { ReportProblem } from "@/components/ReportProblem";
 import { termsIn } from "@/lib/glossary";
 import { nextOpening, optionOrder } from "@/lib/shuffle";
-import { markRedeemed, recordAttempt, useAppState } from "@/lib/store";
+import {
+  markRedeemed,
+  recordAttempt,
+  setState,
+  toggleBookmark,
+  useAppState,
+} from "@/lib/store";
+import { nextInRoute, quickRoute } from "@/lib/tracks";
 import type { Highlight, Mission, Source } from "@/lib/types";
-import { fill, ui } from "@/lib/ui";
+import { faultTypeLabel, fill, ui } from "@/lib/ui";
 
 const LETTERS = ["A", "B", "C", "D"];
 const DONT_KNOW = -1;
@@ -36,11 +45,18 @@ export function MissionView({
   // Set when the mission is shown as a step of the three-minute tour.
   demo?: { step: number; total: number };
 }) {
-  const { lang, attempts, primerOpen, seed, loadedAt, ready } = useAppState();
+  const { lang, attempts, primerOpen, seed, loadedAt, ready, bookmarks, track, mentorOff } =
+    useAppState();
   const t = ui[lang];
   const { missions, lessons } = useCatalog();
   const attempt = attempts[mission.id];
   const lesson = lessons.find((l) => l.slug === mission.lesson);
+  const saved = bookmarks.includes(mission.id);
+  // The hint names the kind of fault. Asking for it before the first answer is recorded.
+  const [hinted, setHinted] = useState(false);
+  // Asking the AI mentor before answering also counts as a hint.
+  const [askedMentor, setAskedMentor] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   // A new order of options on every opening of the mission and every practice run.
   const [opening, setOpening] = useState(nextOpening);
   const order = optionOrder(
@@ -97,7 +113,18 @@ export function MissionView({
       correct,
       ms: c.total + (document.hidden ? 0 : Date.now() - c.since),
       at: new Date().toISOString(),
+      ...(hinted || askedMentor ? { hint: true } : {}),
     });
+  }
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(mission.code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      // Clipboard is unavailable; the code can still be selected by hand.
+    }
   }
 
   // A–D or 1–4 pick an option, "?" picks "I don't know", Enter checks. Re-bound on every
@@ -105,8 +132,8 @@ export function MissionView({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      // Keys pressed inside a form field or the report form are not answers.
-      if (target?.closest("input, textarea, select, [data-report]")) return;
+      // Keys pressed inside a form field, the report form or the mentor are not answers.
+      if (target?.closest("input, textarea, select, [data-report], [data-mentor]")) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === "Enter") {
         // Enter on a link or button does that control's own job, except on an answer
@@ -129,13 +156,23 @@ export function MissionView({
   });
 
   const nextMission = missions[index + 1];
+  // While the quick route is being played, "next" and "previous" follow the route, not the
+  // catalog.
+  const route = quickRoute(missions);
+  const routeStep = !demo && track === "quick" ? route.findIndex((m) => m.id === mission.id) : -1;
+  const prevMission = routeStep >= 0 ? route[routeStep - 1] : missions[index - 1];
+  const routeNext = routeStep >= 0 ? nextInRoute(route, attempts, mission.id) : undefined;
   const next = demo
     ? demo.step < demo.total
       ? { href: `/demo/${demo.step + 1}`, label: t.next }
       : { href: "/", label: t.demoDone }
-    : nextMission
-      ? { href: `/missions/${nextMission.id}`, label: t.next }
-      : { href: "/results", label: t.seeResults };
+    : routeStep >= 0
+      ? routeNext
+        ? { href: `/missions/${routeNext.id}`, label: t.quickNext }
+        : { href: "/", label: t.quickDone }
+      : nextMission
+        ? { href: `/missions/${nextMission.id}`, label: t.next }
+        : { href: "/results", label: t.seeResults };
 
   const codeLines = mission.code ? mission.code.split("\n") : [];
   const terms = termsIn(
@@ -157,10 +194,25 @@ export function MissionView({
         <Link href="/" className="font-medium hover:text-ink">
           ← {demo ? t.demoExit : t.back}
         </Link>
-        <span>
+        <span className="flex items-center gap-3">
           {demo
             ? fill(t.demoOf, { n: demo.step, total: demo.total })
-            : fill(t.missionOf, { n: index + 1, total: missions.length })}
+            : routeStep >= 0
+              ? `${t.quickTitle} · ${routeStep + 1}/${route.length}`
+              : fill(t.missionOf, { n: index + 1, total: missions.length })}
+          <button
+            onClick={() => toggleBookmark(mission.id)}
+            aria-pressed={saved}
+            aria-label={saved ? t.bookmarkRemove : t.bookmarkAdd}
+            title={saved ? t.bookmarkRemove : t.bookmarkAdd}
+            className={`rounded-md border-[1.5px] p-1 ${
+              saved
+                ? "border-accent bg-accent/15 text-accent-text"
+                : "border-line bg-panel hover:border-edge hover:text-ink"
+            }`}
+          >
+            <Icon name="star" size={16} />
+          </button>
         </span>
       </div>
 
@@ -279,11 +331,22 @@ export function MissionView({
               );
             })}
           </pre>
+          <button
+            onClick={copyCode}
+            className="mt-2 text-sm font-medium text-mute underline underline-offset-2 hover:text-ink"
+          >
+            {codeCopied ? t.copied : t.copyCode}
+          </button>
         </Section>
       )}
 
       <Section title={t.question} id="answer">
         {practice && <p className="mb-3 text-sm text-mute">{t.practiceNote}</p>}
+        {(hinted || (attempt?.hint && !practice)) && (
+          <p className="note mb-3 px-4 py-2.5 text-sm">
+            {fill(t.hintText, { type: faultTypeLabel[mission.faultType][lang] })}
+          </p>
+        )}
         {/* Hidden until the saved state is read: the order of options depends on it, and
             they would visibly jump otherwise. */}
         <div className={`space-y-2.5 ${ready ? "" : "invisible"}`}>
@@ -327,9 +390,16 @@ export function MissionView({
         </div>
 
         {!revealed && (
-          <button onClick={check} disabled={choice === null} className="btn btn-primary mt-5">
-            {t.check}
-          </button>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button onClick={check} disabled={choice === null} className="btn btn-primary">
+              {t.check}
+            </button>
+            {!hinted && (
+              <button onClick={() => setHinted(true)} className="btn">
+                {t.hintButton}
+              </button>
+            )}
+          </div>
         )}
 
         {revealed && (
@@ -367,6 +437,7 @@ export function MissionView({
               <button
                 onClick={() => {
                   setPractice({ picked: null, checked: false });
+                  setHinted(false);
                   setOpening(nextOpening());
                 }}
                 className="btn"
@@ -377,6 +448,36 @@ export function MissionView({
           </div>
         )}
       </Section>
+
+      {!mentorOff && (
+        <MentorPanel
+          mission={mission}
+          answered={attempt !== undefined}
+          choice={attempt ? attempt.choice : null}
+          onFirstUse={() => setAskedMentor(true)}
+        />
+      )}
+
+      {!demo && (
+        <nav className="mt-10 flex items-center justify-between gap-4 text-sm font-medium">
+          {prevMission ? (
+            <Link
+              href={`/missions/${prevMission.id}`}
+              onClick={() => track && routeStep < 0 && setState({ track: null })}
+              className="text-mute hover:text-ink"
+            >
+              ← {t.prevMission}
+            </Link>
+          ) : (
+            <span />
+          )}
+          {!revealed && (
+            <Link href={next.href} className="text-mute hover:text-ink">
+              {t.skipMission} →
+            </Link>
+          )}
+        </nav>
+      )}
 
       <ReportProblem missionId={mission.id} />
     </main>

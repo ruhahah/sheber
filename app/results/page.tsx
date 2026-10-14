@@ -6,6 +6,7 @@ import { useCatalog } from "@/components/Catalog";
 import { verdict } from "@/components/Status";
 import { resultText, summarize } from "@/lib/stats";
 import { useAppState } from "@/lib/store";
+import { weakestLesson } from "@/lib/tracks";
 import { faultTypeLabel, fill, ui } from "@/lib/ui";
 
 const RING = 2 * Math.PI * 52;
@@ -13,8 +14,10 @@ const RING = 2 * Math.PI * 52;
 export default function Results() {
   const { lang, attempts, nickname, group, reports } = useAppState();
   const t = ui[lang];
-  const { missions } = useCatalog();
+  const catalog = useCatalog();
+  const { missions } = catalog;
   const stats = summarize(missions, attempts);
+  const weak = weakestLesson(catalog, attempts);
   const [copied, setCopied] = useState(false);
 
   // A tester who only reported problems still has something to send.
@@ -110,6 +113,22 @@ export default function Results() {
         </div>
       </div>
 
+      {weak && (
+        <aside className="note mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4">
+          <p className="flex-1">
+            <span className="font-semibold">{t.weakTitle}.</span>{" "}
+            {fill(t.weakText, {
+              title: weak.lesson.title[lang],
+              found: weak.found,
+              total: weak.answered,
+            })}
+          </p>
+          <Link href={`/learn/${weak.lesson.slug}`} className="btn">
+            {t.readLesson} →
+          </Link>
+        </aside>
+      )}
+
       <section className="mt-12">
         <h2 className="eyebrow">{t.byMission}</h2>
         <ul className="pop mt-4 divide-y divide-line overflow-hidden">
@@ -122,7 +141,12 @@ export default function Results() {
                   className="flex items-center gap-4 px-4 py-2.5 text-sm hover:bg-sunken"
                 >
                   <span className="font-mono text-mute">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="flex-1">{m.title[lang]}</span>
+                  <span className="flex-1">
+                    {m.title[lang]}
+                    {attempt?.hint && (
+                      <span className="ml-2 text-xs text-mute">({t.hintMark})</span>
+                    )}
+                  </span>
                   {attempt && (
                     <span className="font-mono text-mute">
                       {fill(t.seconds, { n: Math.round(attempt.ms / 1000) })}
@@ -151,7 +175,10 @@ export default function Results() {
         <button onClick={copy} className="btn btn-primary mt-4">
           {copied ? t.copied : t.copy}
         </button>
-        <p className="mt-6 text-sm">
+        <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <Link href="/certificate" className="text-accent-text underline underline-offset-2">
+            {t.certOpen} →
+          </Link>
           <Link href="/teacher" className="text-accent-text underline underline-offset-2">
             {t.teacherLink} →
           </Link>

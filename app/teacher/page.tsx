@@ -2,27 +2,89 @@
 
 import { useState } from "react";
 import { useCatalog } from "@/components/Catalog";
-import { aggregate, parseResults } from "@/lib/stats";
+import { aggregate, missionsCsv, parseResults, peopleCsv } from "@/lib/stats";
 import { useAppState } from "@/lib/store";
 import { fill, reportKindLabel, ui } from "@/lib/ui";
 
 const percent = (part: number, whole: number) => (whole ? `${(part / whole) * 100}%` : "0%");
 
+// Saves a table as a file. The leading mark tells Excel that the text is UTF-8.
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob(["\uFEFF" + text], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 // For whoever runs a test: paste the result texts testers sent and see the class as a whole.
 // Everything is computed in the browser; nothing is uploaded.
 export default function Teacher() {
-  const { lang } = useAppState();
+  const { lang, ready } = useAppState();
   const t = ui[lang];
   const [text, setText] = useState("");
   const { missions } = useCatalog();
   const results = parseResults(missions, text);
   const summary = aggregate(missions, results);
+  const [classGroup, setClassGroup] = useState("");
+  const [noMentor, setNoMentor] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  // The address of this site is known only in the browser.
+  const classLink =
+    ready && classGroup.trim()
+      ? `${window.location.origin}/?group=${encodeURIComponent(classGroup.trim())}${
+          noMentor ? "&mentor=off" : ""
+        }`
+      : "";
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(classLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // Clipboard is unavailable; the link stays visible to select by hand.
+    }
+  }
 
   return (
     <main>
       <p className="eyebrow">{t.navResults}</p>
       <h1 className="mt-3 font-display text-4xl font-extrabold">{t.teacherTitle}</h1>
       <p className="mt-4 max-w-xl text-lg text-mute">{t.teacherIntro}</p>
+
+      <section className="card mt-6 p-5">
+        <h2 className="eyebrow">{t.classLinkTitle}</h2>
+        <p className="mt-2 text-sm text-mute">{t.classLinkHint}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <input
+            value={classGroup}
+            onChange={(e) => setClassGroup(e.target.value)}
+            placeholder={t.groupPlaceholder}
+            aria-label={t.group}
+            maxLength={30}
+            className="w-40 rounded-lg border-[1.5px] border-edge bg-panel px-3 py-2 placeholder:text-mute/70"
+          />
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={noMentor}
+              onChange={(e) => setNoMentor(e.target.checked)}
+              className="size-4 accent-(--accent)"
+            />
+            {t.classLinkNoMentor}
+          </label>
+          {classLink && (
+            <>
+              <code className="min-w-0 flex-1 font-mono text-sm break-all">{classLink}</code>
+              <button onClick={copyLink} className="btn">
+                {linkCopied ? t.copied : t.copyLink}
+              </button>
+            </>
+          )}
+        </div>
+      </section>
 
       <textarea
         value={text}
@@ -50,6 +112,21 @@ export default function Teacher() {
               </p>
               <p className="mt-1 text-mute">{t.avgFound}</p>
             </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              onClick={() => download("sheber-missions.csv", missionsCsv(summary, lang))}
+              className="btn"
+            >
+              {t.csvMissions}
+            </button>
+            <button
+              onClick={() => download("sheber-testers.csv", peopleCsv(results))}
+              className="btn"
+            >
+              {t.csvPeople}
+            </button>
           </div>
 
           <div className="mt-8 flex flex-wrap gap-x-5 gap-y-1 text-sm">

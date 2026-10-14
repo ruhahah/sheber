@@ -28,6 +28,7 @@ const OTHER: { prefix: string; label: keyof Dict }[] = [
   { prefix: "/teacher", label: "teacherTitle" },
   { prefix: "/settings", label: "navSettings" },
   { prefix: "/about", label: "about" },
+  { prefix: "/certificate", label: "certTitle" },
 ];
 
 function toggleTheme() {
@@ -39,7 +40,8 @@ function toggleTheme() {
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { lang, theme, textSize, reduceMotion, avatarColor, avatarIcon } = useAppState();
+  const { lang, theme, textSize, reduceMotion, avatarColor, avatarIcon, ready, group } =
+    useAppState();
   const pathname = usePathname();
   const t = ui[lang];
 
@@ -55,6 +57,27 @@ export function Shell({ children }: { children: React.ReactNode }) {
     root.classList.remove("pending");
   }, [theme, lang, textSize, reduceMotion]);
 
+  // A link such as /?group=7A&mentor=off, handed out by whoever runs a test, fills in the
+  // class for a visitor who has not set one and can switch the AI mentor off. The
+  // parameters are then dropped from the address bar.
+  useEffect(() => {
+    if (!ready) return;
+    const params = new URLSearchParams(window.location.search);
+    const fromLink = params.get("group")?.trim();
+    const mentor = params.get("mentor");
+    if (!fromLink && mentor === null) return;
+    if (fromLink && !group.trim()) setState({ group: fromLink.slice(0, 30) });
+    if (mentor === "off" || mentor === "on") setState({ mentorOff: mentor === "off" });
+    params.delete("group");
+    params.delete("mentor");
+    const rest = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + (rest ? `?${rest}` : "") + window.location.hash,
+    );
+  }, [ready, group]);
+
   // Mission and lesson pages name the tab themselves.
   useEffect(() => {
     if (/^\/(missions|learn|demo)\/./.test(pathname)) return;
@@ -68,7 +91,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <header className="top-0 z-10 border-b-[1.5px] border-edge bg-bg/90 backdrop-blur sm:sticky">
+      <header className="top-0 z-10 border-b-[1.5px] border-edge bg-bg/90 backdrop-blur sm:sticky print:hidden">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold">
             {/* A wire with a break in it: the fault to find. */}
@@ -160,7 +183,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       <div className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-20 sm:pt-10">{children}</div>
 
-      <footer className="border-t-[1.5px] border-edge bg-panel/60">
+      <footer className="border-t-[1.5px] border-edge bg-panel/60 print:hidden">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 py-6 text-sm">
           <p className="max-w-md text-mute">{t.aboutNote}</p>
           <nav className="flex flex-wrap gap-x-5 gap-y-1 font-medium">
